@@ -10,31 +10,37 @@
  * license: MIT
  * source: https://github.com/Joker2841/rote-playoffs/tree/main/wsl-toolchain-doctor
  * parameters:
- *   - name: commands
- *     type: string
- *     required: false
- *     default: ""
- *     description: "Optional comma-separated extra command names to check, for example poetry,rbenv,deno. The built-in watchlist already covers the common toolchain."
- *   - name: path_override
- *     type: string
- *     required: false
- *     default: ""
- *     description: "A PATH string to inspect instead of this shell's own. Paste the PATH from a login shell, an editor terminal, or a CI runner to ask the question about that environment rather than this one."
- *   - name: format
- *     type: string
- *     required: false
- *     default: "text"
- *     valid_values: ["text", "json"]
- *     description: "text for the human briefing, json for a machine-readable report suitable for piping into other tooling."
- *   - name: min_severity
- *     type: string
- *     required: false
- *     default: "info"
- *     valid_values: ["high", "medium", "low", "info"]
- *     description: "Lowest severity to report. Counts always cover every severity, so filtering never makes an unchecked machine look clean."
+ * - name: commands
+ *   type: string
+ *   required: false
+ *   default: ''
+ *   description: Optional comma-separated extra command names to check, for example poetry,rbenv,deno. The built-in watchlist already covers the common toolchain.
+ * - name: path_override
+ *   type: string
+ *   required: false
+ *   default: ''
+ *   description: A PATH string to inspect instead of this shell's own. Paste the PATH from a login shell, an editor terminal, or a CI runner to ask the question about that environment rather than this one.
+ * - name: format
+ *   type: string
+ *   required: false
+ *   default: text
+ *   valid_values:
+ *   - text
+ *   - json
+ *   description: text for the human briefing, json for a machine-readable report suitable for piping into other tooling.
+ * - name: min_severity
+ *   type: string
+ *   required: false
+ *   default: info
+ *   valid_values:
+ *   - high
+ *   - medium
+ *   - low
+ *   - info
+ *   description: Lowest severity to report. Counts always cover every severity, so filtering never makes an unchecked machine look clean.
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.1.0
+ *   version: 0.2.0
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
