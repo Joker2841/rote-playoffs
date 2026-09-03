@@ -63,10 +63,32 @@ def worst(findings):
                key=lambda s: SEVERITY_ORDER.get(s, 9))
 
 
+SEVERITY_FLOOR = ["high", "medium", "low", "info"]
+
+
+def argument(index, default):
+    """Optional positional argument; an unresolved token means absent."""
+    if len(sys.argv) <= index:
+        return default
+    raw = sys.argv[index].strip()
+    return default if not raw or raw.startswith("$") else raw
+
+
 def main():
-    if len(sys.argv) != 4:
-        print("usage: render.py <platform> <shadow> <traps>  (path or JSON text)", file=sys.stderr)
+    if len(sys.argv) < 4:
+        print("usage: render.py <platform> <shadow> <traps> [format] [min_severity]",
+              file=sys.stderr)
         return 2
+
+    output_format = argument(4, "text").lower()
+    if output_format not in ("text", "json"):
+        print("format must be text or json", file=sys.stderr)
+        return 2
+    floor = argument(5, "info").lower()
+    if floor not in SEVERITY_FLOOR:
+        print("min_severity must be one of: " + ", ".join(SEVERITY_FLOOR), file=sys.stderr)
+        return 2
+    floor_rank = SEVERITY_ORDER[floor]
 
     platform = load(sys.argv[1])
     shadow = load(sys.argv[2])
@@ -74,6 +96,41 @@ def main():
 
     probes = [("platform", platform), ("commands", shadow), ("config", traps)]
     ok = [name for name, data in probes if "_unavailable" not in data]
+
+    # The floor filters what is reported, never what was checked. A caller
+    # asking only for high findings still gets the counts of everything else,
+    # because "nothing above medium" and "nothing looked at" must not read the
+    # same way.
+    def above_floor(items):
+        return [f for f in items
+                if SEVERITY_ORDER.get(f.get("severity"), 9) <= floor_rank]
+
+    all_findings = list(shadow.get("findings", [])) + list(traps.get("findings", []))
+    if floor != "info":
+        for data in (shadow, traps):
+            if "findings" in data:
+                data["findings"] = above_floor(data["findings"])
+
+    if output_format == "json":
+        counts = {}
+        for finding in all_findings:
+            severity = finding.get("severity", "info")
+            counts[severity] = counts.get(severity, 0) + 1
+        print(json.dumps({
+            "schema": "wsl-toolchain-doctor/v1",
+            "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "applicable": platform.get("applicable", False),
+            "flavour": platform.get("flavour"),
+            "interop": platform.get("interop"),
+            "path_source": shadow.get("path_source", "inherited"),
+            "path_entry_count": shadow.get("path_entry_count"),
+            "windows_entry_count": shadow.get("windows_entry_count"),
+            "severity_counts": counts,
+            "min_severity": floor,
+            "findings": above_floor(all_findings) if floor != "info" else all_findings,
+            "probes_ok": ok,
+        }, indent=2, sort_keys=True))
+        return 0
 
     lines = []
     stamp = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
@@ -151,6 +208,9 @@ def main():
     lines.append("")
 
     lines.append("SCOPE")
+    source = shadow.get("path_source", "inherited")
+    if source == "supplied":
+        lines.append("  Inspected a PATH supplied by the caller, not this shell's own.")
     lines.append("  Reports the PATH of the shell that invoked it. A different shell,")
     lines.append("  or a tool that edits PATH before running this, will see different")
     lines.append("  results. Read-only: no file is written and no command is repaired.")

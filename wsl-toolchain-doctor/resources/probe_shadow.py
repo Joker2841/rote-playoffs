@@ -59,7 +59,7 @@ def dangling(path):
 
 
 def path_entries():
-    raw = os.environ.get("PATH", "")
+    raw = path_override() or os.environ.get("PATH", "")
     seen = {}
     entries = []
     for index, directory in enumerate(raw.split(os.pathsep)):
@@ -107,18 +107,33 @@ def scan(command, entries):
     return bare, windows_ext, broken
 
 
-def extra_commands():
-    """Optional comma-separated additions from the caller.
+def argument(index):
+    """Read one optional positional argument.
 
-    An unresolved template token is treated as absent rather than as a command
-    name, so the play still runs when the parameter is omitted.
+    An unresolved template token is treated as absent rather than as a value,
+    so the play still runs when the parameter is omitted.
     """
-    if len(sys.argv) < 2:
-        return []
-    raw = sys.argv[1].strip()
-    if not raw or raw.startswith("$"):
-        return []
-    return [name.strip() for name in raw.split(",") if name.strip()]
+    if len(sys.argv) <= index:
+        return ""
+    raw = sys.argv[index].strip()
+    return "" if raw.startswith("$") else raw
+
+
+def extra_commands():
+    raw = argument(1)
+    return [name.strip() for name in raw.split(",") if name.strip()] if raw else []
+
+
+def path_override():
+    """Inspect a PATH the caller supplies instead of the inherited one.
+
+    This play reports the PATH of the shell that invoked it, which means the
+    answer legitimately differs between a login shell, an editor's integrated
+    terminal, and a CI runner. Rather than leave that as a caveat in the
+    output, this lets you ask the question about any of them: paste the PATH
+    from the shell you actually care about and get its answer.
+    """
+    return argument(2)
 
 
 def main():
@@ -218,6 +233,7 @@ def main():
 
     print(json.dumps({
         "probe": "shadow",
+        "path_source": "supplied" if path_override() else "inherited",
         "path_entry_count": len(entries),
         "windows_entry_count": sum(1 for e in entries if e["kind"] == "windows"),
         "duplicate_entry_count": sum(1 for e in entries if e["duplicate_of"] is not None),

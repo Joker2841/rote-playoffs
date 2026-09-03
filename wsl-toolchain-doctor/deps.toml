@@ -1,9 +1,30 @@
 schema_version = 1
 
 # python3 is the only host requirement. Every probe is standard library only:
-# no pip install, no virtualenv, no network. Declared so that a puller gets a
-# dependency gate instead of a traceback.
+# no pip install, no virtualenv, no network. Declared so that whoever pulls this
+# play gets a dependency gate instead of a traceback, and an install line rather
+# than just the bad news.
+#
+# In practice python3 ships with every distro WSL offers, so this is a fallback
+# for a minimal or trimmed image rather than an expected step.
 [[tools]]
 id = "python3"
 command = "python3"
 required = true
+version_requirement = ">=3.6"
+
+[[tools.install]]
+manager = "apt"
+package = "python3"
+
+[[tools.install]]
+manager = "dnf"
+package = "python3"
+
+[[tools.install]]
+manager = "pacman"
+package = "python"
+
+[[tools.install]]
+manager = "zypper"
+package = "python3"

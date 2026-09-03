@@ -3,8 +3,8 @@
  * @rote-frontmatter
  * ---
  * name: wsl-toolchain-doctor
- * version: 0.1.0
- * description: "Answers one question on a WSL machine: which of the commands you type are not the program you think they are. Windows directories are appended to the Linux PATH by default and interop makes Windows executables reachable, so three unrelated failures look identical in a terminal and only one of them is shadowing. A command can resolve to an extensionless Windows shim and run as a Windows program with Windows path semantics, which is why docker with a bind mount hands a Windows client a Linux path it cannot see. A command can fail to resolve at all while its .exe sits on PATH, so the shell reports command not found about a tool that is plainly installed. Or it can be a symlink into /mnt/wsl left by a Docker Desktop style integration, which fills that path only while it is running: the directory listing shows the tool, running it finds nothing, and a Windows copy further down PATH silently takes over. Separating those three is the point, because the fix for each is different. It names the exact winning path and what it beat, then reports the configuration that caused it: appendWindowsPath, drive mounts without the metadata option so chmod appears to succeed and does nothing, case-insensitive mounts that collapse two tracked files into one, and whether your home and project sit on the slow 9p filesystem. It reports the PATH of the shell that invoked it and says so, because a diagnostic that hides its own scope is worth less than none. Read-only by construction: it parses configuration and stat data, tests case sensitivity by reading two spellings of a directory that already exists rather than writing probe files, repairs nothing, carries no credentials, and needs only python3. On a host that is not WSL it returns a single applicability verdict instead of inventing findings."
+ * version: 0.2.0
+ * description: 'Answers one question on a WSL machine: which of the commands you type are not the program you think they are. Windows directories are appended to the Linux PATH by default and interop makes Windows executables reachable, so three unrelated failures look identical in a terminal and only one of them is shadowing. A command can resolve to an extensionless Windows shim and run as a Windows program with Windows path semantics, which is why docker with a bind mount hands a Windows client a Linux path it cannot see. A command can fail to resolve at all while its .exe sits on PATH, so the shell reports command not found about a tool that is plainly installed. Or it can be a symlink into /mnt/wsl left by a Docker Desktop style integration, which fills that path only while it is running: the directory listing shows the tool, running it finds nothing, and a Windows copy further down PATH silently takes over. Separating those three is the point, because the fix for each is different. It names the exact winning path and what it beat, then reports the configuration that caused it: appendWindowsPath, drive mounts without the metadata option so chmod appears to succeed and does nothing, case-insensitive mounts that collapse two tracked files into one, and whether your home and project sit on the slow 9p filesystem. It reports the PATH of the shell that invoked it and says so, because a diagnostic that hides its own scope is worth less than none. Read-only by construction: it parses configuration and stat data, tests case sensitivity by reading two spellings of a directory that already exists rather than writing probe files, repairs nothing, carries no credentials, and needs only python3. On a host that is not WSL it returns a single applicability verdict instead of inventing findings.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
  * license: MIT
@@ -15,17 +15,34 @@
  *     required: false
  *     default: ""
  *     description: "Optional comma-separated extra command names to check, for example poetry,rbenv,deno. The built-in watchlist already covers the common toolchain."
+ *   - name: path_override
+ *     type: string
+ *     required: false
+ *     default: ""
+ *     description: "A PATH string to inspect instead of this shell's own. Paste the PATH from a login shell, an editor terminal, or a CI runner to ask the question about that environment rather than this one."
+ *   - name: format
+ *     type: string
+ *     required: false
+ *     default: "text"
+ *     valid_values: ["text", "json"]
+ *     description: "text for the human briefing, json for a machine-readable report suitable for piping into other tooling."
+ *   - name: min_severity
+ *     type: string
+ *     required: false
+ *     default: "info"
+ *     valid_values: ["high", "medium", "low", "info"]
+ *     description: "Lowest severity to report. Counts always cover every severity, so filtering never makes an unchecked machine look clean."
  * metadata:
- *   rote_version: "0.78.0"
- *   version: "0.1.0"
- *   status: draft
+ *   rote_version: 0.78.0
+ *   version: 0.1.0
+ *   status: released
  *   kind: atomic
  *   flow_type: parallel
  *   execution_model: steps_with_presentation
  *   requires_sessions: false
  *   contract:
  *     atomic: true
- *     composable: false
+ *     composable: true
  *     input:
  *       type: none
  *     output:
@@ -33,15 +50,15 @@
  *       destination: stdout
  *   discoverability:
  *     tags:
- *       - wsl
- *       - wsl2
- *       - domain-cross-platform
- *       - tool-shell
- *       - effect-read-only
- *       - path
- *       - toolchain
- *       - diagnostics
- *       - windows-interop
+ *     - wsl
+ *     - wsl2
+ *     - domain-cross-platform
+ *     - tool-shell
+ *     - effect-read-only
+ *     - path
+ *     - toolchain
+ *     - diagnostics
+ *     - windows-interop
  * presentation_fixtures:
  *   detect_platform: resources/presentation-fixtures/detect_platform/fixture.yaml
  *   resolve_commands: resources/presentation-fixtures/resolve_commands/fixture.yaml
@@ -52,19 +69,20 @@
  *     type: process.exec
  *     argv:
  *     - python3
- *     - "@resource{probe_platform.py}"
+ *     - '@resource{probe_platform.py}'
  *   resolve_commands:
  *     type: process.exec
  *     argv:
  *     - python3
- *     - "@resource{probe_shadow.py}"
- *     - "$commands"
+ *     - '@resource{probe_shadow.py}'
+ *     - $commands
+ *     - $path_override
  *     timeout_ms: 120000
  *   read_configuration:
  *     type: process.exec
  *     argv:
  *     - python3
- *     - "@resource{probe_traps.py}"
+ *     - '@resource{probe_traps.py}'
  *   render_briefing:
  *     type: process.exec
  *     depends_on:
@@ -73,10 +91,12 @@
  *     - read_configuration
  *     argv:
  *     - python3
- *     - "@resource{render.py}"
- *     - "@detect_platform{.stdout.text}"
- *     - "@resolve_commands{.stdout.text}"
- *     - "@read_configuration{.stdout.text}"
+ *     - '@resource{render.py}'
+ *     - '@detect_platform{.stdout.text}'
+ *     - '@resolve_commands{.stdout.text}'
+ *     - '@read_configuration{.stdout.text}'
+ *     - $format
+ *     - $min_severity
  * ---
  */
 
