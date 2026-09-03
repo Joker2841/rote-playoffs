@@ -1,0 +1,48 @@
+WSL DISK RECLAIM                                     2026-09-03 16:25 UTC
+
+  probes    ########################  3/3 ok
+
+VERDICT  WSL is holding 120.00 GB of your Windows disk.
+  50.00 GB already freed inside and not returned to Windows
+  9.00 GB sitting in caches that can be cleared
+
+ON THE WINDOWS SIDE
+   90.00 GB  distro   /mnt/c/Users/example/AppData/Local/wsl/{00000000-0000-0000-0000-000000000000}/ext4.vhdx
+   30.00 GB  docker   /mnt/c/Users/example/AppData/Local/Docker/wsl/disk/docker_data.vhdx
+   40.00 GB  inside   reported in use by the distro itself
+
+INSIDE THE DISTRO
+    6.00 GB  user cache
+    5.00 GB  pip cache  (counted inside user cache)
+    2.00 GB  systemd journal
+    1.00 GB  apt package cache
+     n/a  go module cache (not measured)
+
+HOW TO RECLAIM, IN THIS ORDER
+  Freeing space inside does not shrink the Windows file. Compacting
+  before freeing reclaims almost nothing. Do both, in this order.
+
+  1. free it inside the distro
+     ~ review ~/.cache; it is safe to clear but tools will rebuild
+     pip cache purge
+     sudo journalctl --vacuum-size=200M
+     sudo apt clean
+     (lines marked ~ are judgement calls, not routine cleanup)
+
+  2. then hand the freed space back to Windows
+     wsl --manage Ubuntu-24.04 --set-sparse true      (from Windows)
+
+  3. docker keeps its own disk, handled separately
+     docker system df          see what is actually live
+     docker system prune       free it inside docker's disk
+
+SCOPE
+  Read-only. Nothing here is deleted or compacted; every action above
+  is for you to run. Sizes are what the filesystem reports now, and a
+  measurement that did not finish is listed as not measured rather
+  than counted as zero.
+
+STAGES
+  ########  platform   ok
+  ########  images     ok
+  ########  consumers  ok

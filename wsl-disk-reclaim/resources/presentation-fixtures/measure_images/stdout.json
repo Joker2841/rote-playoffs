@@ -1,0 +1,27 @@
+{
+  "probe": "images",
+  "images": [
+    {"path": "/mnt/c/Users/example/AppData/Local/wsl/{00000000-0000-0000-0000-000000000000}/ext4.vhdx", "bytes": 96636764160, "kind": "distro"},
+    {"path": "/mnt/c/Users/example/AppData/Local/Docker/wsl/disk/docker_data.vhdx", "bytes": 32212254720, "kind": "docker"}
+  ],
+  "windows_total_bytes": 128849018880,
+  "distro_bytes": 96636764160,
+  "docker_bytes": 32212254720,
+  "distro_reclaimable_bytes": 53687091200,
+  "inside": {"total_bytes": 1081101176832, "used_bytes": 42949672960},
+  "wsl_sparse": {"available": "yes", "version": "2.4.11"},
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "unreclaimed_distro_space",
+      "detail": "The distro image occupies more on Windows than the distro reports using inside. That difference is space already freed inside WSL that Windows has not been given back, and it does not return on its own.",
+      "bytes": 53687091200
+    },
+    {
+      "severity": "medium",
+      "kind": "large_docker_image_store",
+      "detail": "Docker Desktop keeps its own virtual disk, separate from the distro. How much of this is live data is not visible from here: run `docker system df` to see it. Pruning frees space inside that disk but does not shrink the file, which needs its own compaction.",
+      "bytes": 32212254720
+    }
+  ]
+}

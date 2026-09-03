@@ -1,0 +1,19 @@
+{
+  "probe": "consumers",
+  "threshold_bytes": 536870912,
+  "measured_total_bytes": 9663676416,
+  "incomplete": ["go module cache"],
+  "consumers": [
+    {"label": "apt package cache", "path": "/var/cache/apt", "state": "measured", "bytes": 1073741824, "remedy": "sudo apt clean", "routine": true, "contained_by": null},
+    {"label": "user cache", "path": "~/.cache", "state": "measured", "bytes": 6442450944, "remedy": "review ~/.cache; it is safe to clear but tools will rebuild", "routine": false, "contained_by": null},
+    {"label": "pip cache", "path": "~/.cache/pip", "state": "measured", "bytes": 5368709120, "remedy": "pip cache purge", "routine": true, "contained_by": "user cache"},
+    {"label": "systemd journal", "path": "/var/log/journal", "state": "measured", "bytes": 2147483648, "remedy": "sudo journalctl --vacuum-size=200M", "routine": true, "contained_by": null},
+    {"label": "go module cache", "path": "~/go/pkg/mod", "state": "timed-out", "bytes": null, "remedy": "go clean -modcache", "routine": false}
+  ],
+  "findings": [
+    {"severity": "medium", "kind": "reclaimable_cache", "label": "user cache", "path": "~/.cache", "bytes": 6442450944, "remedy": "review ~/.cache; it is safe to clear but tools will rebuild", "routine": false, "contained_by": null},
+    {"severity": "medium", "kind": "reclaimable_cache", "label": "pip cache", "path": "~/.cache/pip", "bytes": 5368709120, "remedy": "pip cache purge", "routine": true, "contained_by": "user cache"},
+    {"severity": "medium", "kind": "reclaimable_cache", "label": "systemd journal", "path": "/var/log/journal", "bytes": 2147483648, "remedy": "sudo journalctl --vacuum-size=200M", "routine": true, "contained_by": null},
+    {"severity": "low", "kind": "reclaimable_cache", "label": "apt package cache", "path": "/var/cache/apt", "bytes": 1073741824, "remedy": "sudo apt clean", "routine": true, "contained_by": null}
+  ]
+}

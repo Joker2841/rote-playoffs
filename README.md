@@ -1,9 +1,17 @@
+# rote-playoffs
+
+Two Plays for the Rote Playoffs, both about WSL, both read-only, both needing
+nothing but python3 and coreutils. No credentials, no network, no adapters.
+
+    sai0000/wsl-toolchain-doctor    which commands are not the program you think
+    sai0000/wsl-disk-reclaim        why the Windows drive is full when WSL is not
+
+---
+
 # wsl-toolchain-doctor
 
-A Play for the Rote Playoffs. It answers one question on a WSL machine: which
-of the commands you type are not the program you think they are.
-
-Read-only. No credentials. Needs python3 and nothing else.
+Answers one question on a WSL machine: which of the commands you type are not
+the program you think they are.
 
 ## Why this exists
 
@@ -86,3 +94,50 @@ which does not belong in a public artifact.
 ## Licence
 
 MIT
+
+
+---
+
+# wsl-disk-reclaim
+
+Answers a different question on the same machine: why is the Windows drive full
+when the distro says it is not.
+
+A WSL2 distro lives in a virtual disk that grows on demand and never shrinks on
+its own. Delete forty gigabytes inside and the file Windows sees stays exactly
+as large as it ever got. `df`, run inside, reports only the inside view, so the
+space is invisible from the one place people look for it.
+
+## What it reports
+
+- Each virtual disk on the Windows side, sized, and what the distro admits to
+  using inside. The gap is what a compaction would give back.
+- The caches inside worth clearing, with nesting marked so a parent directory
+  and its child are never counted twice.
+- Commands, in the order that works. Freeing space inside does nothing to the
+  Windows file until the image is compacted, and compacting before freeing
+  reclaims almost nothing. That ordering is why people try one half, see no
+  change, and conclude the whole thing is a myth.
+
+## Running it
+
+    rote play run wsl-disk-reclaim/main.ts
+    rote play run wsl-disk-reclaim/main.ts format=json threshold_mb=1000
+    rote play run wsl-disk-reclaim/main.ts extra_paths=~/work/node_modules
+
+## Two more corrections kept on the record
+
+The first version summed both virtual disks and subtracted the distro's inside
+usage, which counted Docker Desktop's live data as reclaimable and overstated
+the answer by about 50 GB. Docker keeps a separate disk whose interior is not
+visible from inside the distro, so it is now reported on its own terms with a
+pointer to `docker system df`.
+
+The second version double-counted caches: `~/.cache/pip` and
+`~/.cache/ms-playwright` both sit inside `~/.cache`, so the total claimed 12.25
+GB where the honest figure was 6.92 GB. Nested paths are now detected and
+excluded from the total, and labelled in the output.
+
+Both were caught by checking the numbers against the machine rather than
+trusting them. A tool that tells you how much space you can get back is worth
+nothing if the number is inflated.

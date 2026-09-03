@@ -1,0 +1,39 @@
+schema_version = 1
+
+# python3 for the probes, du for directory sizes. Both are standard library or
+# coreutils: no pip install, no virtualenv, no network. Declared so that whoever
+# pulls this play gets a dependency gate and an install line, not a traceback.
+[[tools]]
+id = "python3"
+command = "python3"
+required = true
+version_requirement = ">=3.6"
+
+[[tools.install]]
+manager = "apt"
+package = "python3"
+
+[[tools.install]]
+manager = "dnf"
+package = "python3"
+
+[[tools.install]]
+manager = "pacman"
+package = "python"
+
+[[tools]]
+id = "du"
+command = "du"
+required = true
+
+[[tools.install]]
+manager = "apt"
+package = "coreutils"
+
+[[tools.install]]
+manager = "dnf"
+package = "coreutils"
+
+[[tools.install]]
+manager = "pacman"
+package = "coreutils"

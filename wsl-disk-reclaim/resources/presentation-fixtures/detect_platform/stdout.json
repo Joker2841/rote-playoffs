@@ -1,0 +1,9 @@
+{
+  "applicable": true,
+  "flavour": "wsl2",
+  "interop": "enabled",
+  "kernel_release": "5.15.167.4-microsoft-standard-WSL2",
+  "probe": "platform",
+  "wsl_distro_name": "Ubuntu-24.04",
+  "wsl_interop_socket": "present"
+}
