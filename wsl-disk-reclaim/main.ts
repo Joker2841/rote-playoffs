@@ -7,6 +7,7 @@
  * description: 'Answers one question on a WSL machine: why is the Windows drive full when the distro says it is not. A WSL2 distro lives in a virtual disk that grows on demand and never shrinks on its own. Delete forty gigabytes inside the distro and the file Windows sees stays exactly as large as it ever got, because handing the space back requires an explicit compaction that nothing prompts you to run. df, run inside, reports only the inside view, so the missing space is invisible from the one place people look for it. This reports both numbers and the gap between them, per image rather than in aggregate, and that distinction is the point: the distro image can be compared against what the filesystem says it is using, while Docker Desktop keeps a separate disk whose interior is not visible from inside the distro, so folding it into one total would invent tens of gigabytes of reclaimable space that are not free. It then measures the caches inside that are worth clearing, marks the ones that nest so a parent and its child are never counted twice, and lists a measurement that did not finish as not measured rather than as zero. The output ends in commands, in the order that actually works: freeing space inside does nothing to the Windows file until the image is compacted, and compacting before freeing reclaims almost nothing, which is why people try one, see no change, and conclude the whole exercise is a myth. Read-only by construction: it stats files and runs du, deletes nothing, compacts nothing, carries no credentials, and needs only python3 and coreutils. Every suggested command is printed for a person to run, never executed. On a host that is not WSL it returns a single applicability verdict instead of inventing findings.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
+ *   url: https://github.com/Joker2841/rote-playoffs/tree/main/wsl-disk-reclaim
  * license: MIT
  * source: https://github.com/Joker2841/rote-playoffs/tree/main/wsl-disk-reclaim
  * parameters:
@@ -28,9 +29,19 @@
  *   required: false
  *   default: ''
  *   description: Comma-separated extra directories to measure, for example a node_modules tree or a dataset directory. No fixed list can know where those live on your machine.
+ * tags:
+ * - wsl
+ * - wsl2
+ * - domain-cross-platform
+ * - tool-shell
+ * - effect-read-only
+ * - disk
+ * - storage
+ * - vhdx
+ * - reclaim
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.1.0
+ *   version: 0.1.1
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
