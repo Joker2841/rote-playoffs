@@ -1,0 +1,44 @@
+{
+  "probe": "traps",
+  "wsl_conf": {
+    "present": true,
+    "append_windows_path": "default-true",
+    "systemd": "true",
+    "generate_resolv_conf": "default-true"
+  },
+  "pid1": "systemd",
+  "home": "/home/example",
+  "home_on_windows": false,
+  "cwd": "/home/example/work/api",
+  "cwd_on_windows": false,
+  "windows_mounts": [
+    {
+      "mountpoint": "/mnt/c",
+      "fstype": "9p",
+      "device": "C:\\134",
+      "has_metadata": false,
+      "case_option": "unset"
+    }
+  ],
+  "windows_mount_case": "insensitive",
+  "linux_root_case": "sensitive",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "mount_without_metadata",
+      "detail": "Mounted without the metadata option, so Unix ownership and permission bits are not stored. chmod appears to succeed and silently does nothing, and scripts here can read as executable when they are not.",
+      "path": "/mnt/c"
+    },
+    {
+      "severity": "medium",
+      "kind": "case_insensitive_mount",
+      "detail": "Case-insensitive mount. Two tracked files differing only in case collapse into one, so a clean checkout can silently disagree with the repository.",
+      "path": "/mnt/c"
+    },
+    {
+      "severity": "info",
+      "kind": "windows_path_appended",
+      "detail": "Windows PATH is appended to the Linux PATH. This is the root cause of every shadowing result in the command probe. Setting appendWindowsPath=false under [interop] in /etc/wsl.conf removes the Windows entries, at the cost of losing interop conveniences such as calling code or explorer.exe from the shell."
+    }
+  ]
+}

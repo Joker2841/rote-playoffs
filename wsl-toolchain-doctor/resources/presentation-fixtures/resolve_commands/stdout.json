@@ -1,0 +1,83 @@
+{
+  "probe": "shadow",
+  "path_entry_count": 24,
+  "windows_entry_count": 11,
+  "duplicate_entry_count": 1,
+  "missing_entries": ["/home/example/.local/share/absent/bin"],
+  "commands": [
+    {
+      "command": "docker",
+      "verdict": "windows_only",
+      "resolves_to": "/mnt/c/Program Files/Docker/Docker/resources/bin/docker",
+      "bare_hits": [
+        {
+          "path": "/mnt/c/Program Files/Docker/Docker/resources/bin/docker",
+          "kind": "windows",
+          "path_index": 17
+        }
+      ],
+      "windows_extension_hits": [],
+      "broken_links": [
+        {
+          "path": "/usr/bin/docker",
+          "target": "/mnt/wsl/docker-desktop/cli-tools/usr/bin/docker",
+          "path_index": 4
+        }
+      ]
+    },
+    {
+      "command": "psql",
+      "verdict": "windows_exe_only",
+      "resolves_to": null,
+      "bare_hits": [],
+      "windows_extension_hits": [
+        {
+          "path": "/mnt/c/Program Files/PostgreSQL/16/bin/psql.exe",
+          "kind": "windows",
+          "path_index": 19,
+          "extension": ".exe"
+        }
+      ],
+      "broken_links": []
+    },
+    {
+      "command": "git",
+      "verdict": "linux_ok",
+      "resolves_to": "/usr/bin/git",
+      "bare_hits": [{"path": "/usr/bin/git", "kind": "linux", "path_index": 5}],
+      "windows_extension_hits": [],
+      "broken_links": []
+    }
+  ],
+  "findings": [
+    {
+      "severity": "high",
+      "command": "docker",
+      "kind": "broken_integration_symlink",
+      "detail": "Listed on PATH but the symlink target is missing. Typical of Docker Desktop or another WSL integration that only populates /mnt/wsl while it is running.",
+      "path": "/usr/bin/docker",
+      "target": "/mnt/wsl/docker-desktop/cli-tools/usr/bin/docker"
+    },
+    {
+      "severity": "medium",
+      "command": "docker",
+      "kind": "windows_only",
+      "detail": "Resolves to a Windows program. It runs, with Windows path semantics.",
+      "path": "/mnt/c/Program Files/Docker/Docker/resources/bin/docker"
+    },
+    {
+      "severity": "medium",
+      "command": "psql",
+      "kind": "windows_exe_only",
+      "detail": "Not runnable as a bare command, but a Windows executable is on PATH. The shell reports command not found while the tool is installed; it only responds to the full name with its extension.",
+      "path": "/mnt/c/Program Files/PostgreSQL/16/bin/psql.exe"
+    },
+    {
+      "severity": "low",
+      "command": null,
+      "kind": "duplicate_path_entry",
+      "detail": "Duplicate PATH entry, usually an unguarded shell rc append.",
+      "path": "/home/example/.local/bin"
+    }
+  ]
+}

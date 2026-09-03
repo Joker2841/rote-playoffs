@@ -1,0 +1,9 @@
+schema_version = 1
+
+# python3 is the only host requirement. Every probe is standard library only:
+# no pip install, no virtualenv, no network. Declared so that a puller gets a
+# dependency gate instead of a traceback.
+[[tools]]
+id = "python3"
+command = "python3"
+required = true

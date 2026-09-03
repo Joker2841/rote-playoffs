@@ -1,0 +1,49 @@
+WSL TOOLCHAIN DOCTOR                                 2026-09-03 15:48 UTC
+
+  probes    ########################  3/3 ok
+
+VERDICT  Your toolchain is lying to you.
+  1 high, 4 medium, 1 low, 1 info
+
+WHERE YOU ARE
+  flavour   wsl2   distro Ubuntu-24.04   interop enabled
+  kernel    5.15.167.4-microsoft-standard-WSL2
+  home      on the linux filesystem
+  project   on the linux filesystem
+
+WHAT RESOLVES WRONG
+  HIGH   docker     looks installed, resolves to nothing
+         /usr/bin/docker
+         target missing: /mnt/wsl/docker-desktop/cli-tools/usr/bin/docker
+  MEDIUM docker     runs as a Windows program
+         /mnt/c/Program Files/Docker/Docker/resources/bin/docker
+  MEDIUM psql       command not found, but installed on Windows
+         /mnt/c/Program Files/PostgreSQL/16/bin/psql.exe
+
+WHY
+  MEDIUM mount_without_metadata  /mnt/c
+         Mounted without the metadata option, so Unix ownership and permission bits are
+         not stored. chmod appears to succeed and silently does nothing, and scripts
+         here can read as executable when they are not.
+  MEDIUM case_insensitive_mount  /mnt/c
+         Case-insensitive mount. Two tracked files differing only in case collapse into
+         one, so a clean checkout can silently disagree with the repository.
+  INFO   windows_path_appended
+         Windows PATH is appended to the Linux PATH. This is the root cause of every
+         shadowing result in the command probe. Setting appendWindowsPath=false under
+         [interop] in /etc/wsl.conf removes the Windows entries, at the cost of losing
+         interop conveniences such as calling code or explorer.exe from the shell.
+
+PATH SHAPE
+  24 entries   11 windows   1 duplicate
+  missing   /home/example/.local/share/absent/bin
+
+SCOPE
+  Reports the PATH of the shell that invoked it. A different shell,
+  or a tool that edits PATH before running this, will see different
+  results. Read-only: no file is written and no command is repaired.
+
+STAGES
+  ########  platform   ok
+  ########  commands   ok
+  ########  config     ok
