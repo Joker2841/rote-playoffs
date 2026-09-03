@@ -1,0 +1,44 @@
+PLAY QUALITY DOCTOR                                  2026-09-03 16:44 UTC
+
+  audited   ########################  2 play(s)
+
+VERDICT  1 of 2 audited play(s) are capped below 1.00.
+  rote play validate reports Pass with no error and no warning
+  for every one of them. The cap is silent.
+
+WHAT IS COSTING THE MOST
+  -0.25  output_format              1 play(s)   needs an output contract
+  -0.12  discoverability            1 play(s)   needs a top-level tags: block
+  -0.10  provenance_url             1 play(s)   needs a top-level source: URL
+
+PER PLAY
+  0.53  report-builder                   -0.47
+        -0.25 output_format
+        -0.12 discoverability
+        -0.10 provenance_url
+
+HOW TO FIX EACH ONE
+  output_format  (-0.25)
+      Add an output contract. Either a top-level `output:` block, or `output:`
+      nested under `metadata.contract:`. Both satisfy it; declare format and
+      destination.
+  discoverability  (-0.12)
+      Add a top-level `tags:` list. Tags under `metadata.discoverability.tags`
+      do NOT satisfy this, and that is the shape the exporter generates, so most
+      plays have the tags in the wrong place. One tag is enough to pass; keep
+      the discoverability block as well.
+  provenance_url  (-0.10)
+      Add a top-level `source:` URL pointing at where the play comes from.
+      `provenance.url` does not satisfy this despite the signal name.
+
+METHOD AND ITS LIMITS
+  The rubric is not published. These rules were derived by mutating a play
+  that scored 1.00, one field at a time, and reading the score back from
+  rote play validate; then checked against published plays scoring 0.45,
+  0.52, 0.65, 0.77 and 0.90 until the prediction matched each one. That
+  makes this a model of the scorer, not the scorer. Treat rote play validate
+  as authoritative: if it disagrees with this, it is right and this is out
+  of date. Signals that no audited play failed cannot be confirmed by this
+  method and are not reported.
+
+  Read-only: no play is modified. Frontmatter parsed with yaml.

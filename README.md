@@ -1,10 +1,11 @@
 # rote-playoffs
 
-Two Plays for the Rote Playoffs, both about WSL, both read-only, both needing
+Three Plays for the Rote Playoffs, both about WSL, both read-only, both needing
 nothing but python3 and coreutils. No credentials, no network, no adapters.
 
     sai0000/wsl-toolchain-doctor    which commands are not the program you think
     sai0000/wsl-disk-reclaim        why the Windows drive is full when WSL is not
+    sai0000/play-quality-doctor     why your Play's quality score is capped
 
 ---
 
@@ -141,3 +142,54 @@ excluded from the total, and labelled in the output.
 Both were caught by checking the numbers against the machine rather than
 trusting them. A tool that tells you how much space you can get back is worth
 nothing if the number is inflated.
+
+
+---
+
+# play-quality-doctor
+
+Answers one question about a published Play: why is its quality score capped,
+when nothing is telling you.
+
+`rote play validate` prints a score, reports zero errors and zero warnings, says
+Pass, and stops. If the score is 0.65 it will not say which signal is
+unsatisfied, what it wanted, or what the missing field is worth.
+
+## How the rules were derived
+
+The rubric is not published, so it was reconstructed. A Play scoring 1.00 was
+mutated one field at a time and the score read back from `rote play validate`.
+The resulting model was then checked against published Plays scoring 0.45, 0.52,
+0.65, 0.77 and 0.90 until the predicted score matched every one.
+
+    output_format             0.25   top-level output: OR metadata.contract.output
+    frontmatter_completeness  0.25   metadata.version
+    parametrization           0.13   at least one parameter
+    discoverability           0.12   top-level tags:
+    provenance_url            0.10   top-level source:
+    dag_structure             0.08   a steps: block
+
+Two are counterintuitive. Tags under `metadata.discoverability.tags` do not
+satisfy the discoverability signal, and that is the shape the workspace exporter
+generates, so a Play can carry nine tags and still lose the points. And
+`provenance_url` reads a top-level `source:` field, not `provenance.url`.
+
+Fields that turn out to be worth nothing to the score: `license`,
+`provenance.url`, `presentation_fixtures`, `depends_on`, `timeout_ms`, and
+description length.
+
+## What it is not
+
+A model of the scorer, not the scorer. `rote play validate` stays authoritative;
+where the two disagree, this is what is wrong. It is also not a general Play
+linter, deliberately. It answers one question.
+
+## Running it
+
+    rote play run play-quality-doctor/main.ts
+    rote play run play-quality-doctor/main.ts play=modiqo/hello
+    rote play run play-quality-doctor/main.ts format=json min_score=0.99
+
+Read-only. It reads frontmatter and nothing else, modifies no Play, needs no
+credentials and no network. pyyaml is used only when already importable, with a
+structural-scan fallback, so running it never requires installing anything.

@@ -1,0 +1,11 @@
+{
+  "probe": "locate",
+  "target": "all",
+  "flows_root": "/home/example/.rote/flows",
+  "entrypoints": [
+    "/home/example/.rote/flows/example-org/report-builder/main.ts",
+    "/home/example/.rote/flows/tidy-branches/main.ts"
+  ],
+  "count": 2,
+  "unresolved": []
+}

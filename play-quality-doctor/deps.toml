@@ -1,0 +1,23 @@
+schema_version = 1
+
+# python3 only. The frontmatter parse prefers pyyaml when it is importable and
+# falls back to a structural scan written for this one generated format when it
+# is not, so pyyaml is deliberately not a requirement: a play that needs a pip
+# install on someone else's machine is a play they will not run.
+[[tools]]
+id = "python3"
+command = "python3"
+required = true
+version_requirement = ">=3.6"
+
+[[tools.install]]
+manager = "apt"
+package = "python3"
+
+[[tools.install]]
+manager = "dnf"
+package = "python3"
+
+[[tools.install]]
+manager = "pacman"
+package = "python"
