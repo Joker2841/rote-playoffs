@@ -155,12 +155,10 @@ when nothing is telling you.
 Pass, and stops. If the score is 0.65 it will not say which signal is
 unsatisfied, what it wanted, or what the missing field is worth.
 
-## How the rules were derived
+## How the rules were derived, and how to check them
 
 The rubric is not published, so it was reconstructed. A Play scoring 1.00 was
 mutated one field at a time and the score read back from `rote play validate`.
-The resulting model was then checked against published Plays scoring 0.45, 0.52,
-0.65, 0.77 and 0.90 until the predicted score matched every one.
 
     output_format             0.25   top-level output: OR metadata.contract.output
     frontmatter_completeness  0.25   metadata.version
@@ -169,14 +167,55 @@ The resulting model was then checked against published Plays scoring 0.45, 0.52,
     provenance_url            0.10   top-level source:
     dag_structure             0.08   a steps: block
 
-Two are counterintuitive. Tags under `metadata.discoverability.tags` do not
-satisfy the discoverability signal, and that is the shape the workspace exporter
-generates, so a Play can carry nine tags and still lose the points. And
-`provenance_url` reads a top-level `source:` field, not `provenance.url`.
+**Do not take these on trust.** `tools/derive_rubric.py` re-derives them against
+any Play of your own that scores 1.00. It copies the package, removes one field
+at a time, and prints what each is worth. `--pairs` also tests combinations.
+
+    python3 tools/derive_rubric.py ~/.rote/flows/<a-play-scoring-1.00> --pairs
+
+## How strong the evidence actually is
+
+Weaker than a list of six clean numbers suggests, so here is what was really
+done. The weights were fitted on one control. They were then tried against five
+published Plays: two predicted correctly first time, and three were mispredicted
+and each revealed a signal the model was missing. So the genuinely held-out
+evidence is two Plays, not five. The three mispredictions are what produced the
+top-level `output:` alternative, `parametrization`, and `dag_structure`.
+
+One interaction is measured, not assumed. With `metadata.version` absent,
+`discoverability` is not scored at all:
+
+    tags missing only            0.88
+    version missing only         0.75
+    both missing                 0.75      not 0.63
+
+An earlier version of this model treated the weights as freely additive and
+overstated the loss by 0.12 in exactly that case, which falls in the 0.3-0.5
+band where the Plays that most need this sit.
+
+One residual is unexplained. `modiqo/hello` scores 0.45 where this predicts
+0.40. No adjustment fixes it without breaking `expedition-cache-invalidator`, so
+a factor is still unaccounted for and the report says so rather than hiding it.
 
 Fields that turn out to be worth nothing to the score: `license`,
 `provenance.url`, `presentation_fixtures`, `depends_on`, `timeout_ms`, and
 description length.
+
+## Why this exists
+
+Two of the rules are counterintuitive. Tags under
+`metadata.discoverability.tags` do not satisfy the discoverability signal, and
+that is the shape the workspace exporter generates, so a Play can carry nine
+tags and still lose the points. And `provenance_url` reads a top-level `source:`
+field, not `provenance.url`.
+
+The point is not that any particular Play scores badly. It is that `validate`
+reports Pass, zero errors and zero warnings, while capping you, and gives no way
+to find out why. Of the ten Plays installed when this was first run, six were
+capped and all six validated clean. That included `modiqo/hello` at 0.40, which
+is a useful illustration precisely because it is the reference Play everyone
+starts from: if the best-documented example in the registry can be silently
+capped, the problem is the silence, not the author.
 
 ## What it is not
 

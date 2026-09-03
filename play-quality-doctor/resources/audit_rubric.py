@@ -182,7 +182,22 @@ def audit(path):
                 "fix": rule["fix"],
             })
 
-    lost = sum(item["weight"] for item in unsatisfied)
+    # Known interaction, measured rather than assumed: with metadata.version
+    # absent, discoverability is not scored at all. Removing tags alone costs
+    # 0.12; removing version alone costs 0.25; removing both costs 0.25, not
+    # 0.37. Treating the weights as freely additive overstates the loss by
+    # exactly the tags weight in that case, and only in that case. The signal
+    # is still reported, because it starts costing the moment version is fixed.
+    missing = {item["signal"] for item in unsatisfied}
+    gated = []
+    if "frontmatter_completeness" in missing and "discoverability" in missing:
+        for item in unsatisfied:
+            if item["signal"] == "discoverability":
+                item["scored"] = False
+                item["gated_by"] = "frontmatter_completeness"
+                gated.append(item["signal"])
+
+    lost = sum(item["weight"] for item in unsatisfied if item.get("scored", True))
     declared = front.get("name") if isinstance(front.get("name"), str) else name
     return {
         "play": declared or name,
@@ -191,6 +206,7 @@ def audit(path):
         "parser": "yaml" if HAVE_YAML else "structural-scan",
         "predicted_score": round(max(0.0, 1.0 - lost), 2),
         "points_lost": round(lost, 2),
+        "gated_signals": gated,
         "unsatisfied": unsatisfied,
     }
 

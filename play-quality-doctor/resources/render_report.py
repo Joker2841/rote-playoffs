@@ -124,7 +124,12 @@ def main():
         lines.append("  %.2f  %-32s -%.2f" % (result["predicted_score"], result["play"],
                                               result["points_lost"]))
         for item in result["unsatisfied"]:
-            lines.append("        -%.2f %s" % (item["weight"], item["signal"]))
+            if item.get("scored", True):
+                lines.append("        -%.2f %s" % (item["weight"], item["signal"]))
+            else:
+                lines.append("         0.00 %s (not scored while %s is missing; "
+                             "it starts costing once that is fixed)"
+                             % (item["signal"], item.get("gated_by", "another signal")))
     lines.append("")
 
     if fixes:
@@ -148,14 +153,20 @@ def main():
 
     lines.append("METHOD AND ITS LIMITS")
     method = (
-        "The rubric is not published. These rules were derived by mutating a play "
-        "that scored 1.00, one field at a time, and reading the score back from "
-        "rote play validate; then checked against published plays scoring 0.45, "
-        "0.52, 0.65, 0.77 and 0.90 until the prediction matched each one. That "
-        "makes this a model of the scorer, not the scorer. Treat rote play "
-        "validate as authoritative: if it disagrees with this, it is right and "
-        "this is out of date. Signals that no audited play failed cannot be "
-        "confirmed by this method and are not reported."
+        "The rubric is not published. These weights were derived by taking a play "
+        "that scored 1.00, removing one frontmatter field at a time, and reading "
+        "the score back from rote play validate. They were then refined against "
+        "five published plays: two were predicted correctly first time, and three "
+        "were mispredicted and revealed additional signals, so treat the "
+        "genuinely held-out evidence as two plays rather than five. One "
+        "interaction is measured rather than assumed: with metadata.version "
+        "absent, discoverability is not scored, so those two weights do not add. "
+        "A known residual: modiqo/hello scores 0.45 where this predicts 0.40, and "
+        "no adjustment fixes it without breaking another play, so a factor here "
+        "is still unaccounted for. This is a model of the scorer, not the scorer. "
+        "rote play validate is authoritative; where they disagree, this is wrong. "
+        "Do not take the weights on trust: tools/derive_rubric.py in the source "
+        "repository re-derives them against any play of your own that scores 1.00."
     )
     for wrapped in textwrap.wrap(method, width=74):
         lines.append("  " + wrapped)
