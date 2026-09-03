@@ -8,6 +8,7 @@
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
  * license: MIT
+ * source: https://github.com/Joker2841/rote-playoffs/tree/main/wsl-toolchain-doctor
  * parameters:
  *   - name: commands
  *     type: string
