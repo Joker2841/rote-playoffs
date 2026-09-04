@@ -1,0 +1,23 @@
+Chi blú is right, and this correction matters more than my original post.
+
+`rote play score <main.ts>` prints every signal with its weight and status. It is authoritative, and it was in `rote play --help` the whole time. I grepped that output for test, verify and proof, and never for score. So my premise was wrong: `validate` does not name the unsatisfied signal, but `score` does.
+
+Worse, my reconstructed weights were a structurally wrong model that happened to total correctly on the Plays I tested. The real rubric, v1.1.0:
+
+```
+frontmatter_completeness  0.25   partial credit; tags live here
+parametrization           0.25
+output_format             0.25
+provenance_url            0.10
+response_id_leak          0.05
+dag_structure             0.05
+jsonpath_syntax           0.05
+```
+
+There is no `discoverability` signal worth 0.12. Tags are one input to `frontmatter_completeness`, which scores 0.50 when they are missing.
+
+That also explains something I had measured and could not account for: removing tags and version together cost less than removing each alone summed. They were never separate signals, so of course they did not add. I reported that as a strange interaction rather than as evidence my model was wrong. I also missed `response_id_leak` entirely and had `parametrization` and `dag_structure` weights wrong.
+
+What survives: `validate` still calls a capped Play a clean pass, zero errors and zero warnings, with no pointer to `score`. Six of my ten installed Plays are below 1.00 and validate calls all six clean. So the ask stands, narrowed: have `validate` print the signal table, or just say run `rote play score`.
+
+If you ran my derive script, throw those numbers away and run `rote play score`. I have marked it superseded rather than deleting it, so the wrong turn stays on the record.
