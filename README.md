@@ -493,7 +493,7 @@ sharing one incidental word is not a collision. A Play with three downloads
 whose name is your idea is.
 
 Four verdicts: **already built**, **crowded**, **adjacent work exists**, and
-**nothing close found** — the last deliberately not phrased as proof.
+**nothing close found**, the last deliberately not phrased as proof.
 
 ## Why it exists
 
