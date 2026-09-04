@@ -1,0 +1,25 @@
+schema_version = 1
+
+# python3 only, standard library only. No pip install, no virtualenv, no
+# network. Declared so a puller gets a dependency gate rather than a traceback.
+[[tools]]
+id = "python3"
+command = "python3"
+required = true
+version_requirement = ">=3.6"
+
+[[tools.install]]
+manager = "brew"
+package = "python@3.12"
+
+[[tools.install]]
+manager = "apt"
+package = "python3"
+
+[[tools.install]]
+manager = "dnf"
+package = "python3"
+
+[[tools.install]]
+manager = "pacman"
+package = "python"

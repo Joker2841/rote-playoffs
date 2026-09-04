@@ -1,11 +1,12 @@
 # rote-playoffs
 
-Three Plays for the Rote Playoffs, both about WSL, both read-only, both needing
+Four Plays for the Rote Playoffs, both about WSL, both read-only, both needing
 nothing but python3 and coreutils. No credentials, no network, no adapters.
 
     sai0000/wsl-toolchain-doctor    which commands are not the program you think
     sai0000/wsl-disk-reclaim        why the Windows drive is full when WSL is not
     sai0000/play-quality-doctor     why your Play's quality score is capped
+    sai0000/which-actually-runs     which copy of a command actually runs, on any Unix
 
 ---
 
@@ -411,3 +412,53 @@ linter, deliberately. It answers one question.
 Read-only. It reads frontmatter and nothing else, modifies no Play, needs no
 credentials and no network. pyyaml is used only when already importable, with a
 structural-scan fallback, so running it never requires installing anything.
+
+
+---
+
+# which-actually-runs
+
+Answers one question on any Unix machine: when you type a command, which copy
+actually runs, and what did it beat.
+
+Four unrelated causes produce that same symptom and none announce themselves.
+
+- A **version manager** puts a shim ahead of the system copy. Correct, until two
+  of them fight or a shim points at a version you uninstalled.
+- **Homebrew** installs to `/opt/homebrew` on Apple silicon and `/usr/local` on
+  Intel while the system copy stays in `/usr/bin`. Which wins depends on a PATH
+  order nobody set on purpose.
+- Under **WSL** the Windows PATH is appended, so a command can resolve to a
+  Windows program, or fail to resolve while its `.exe` sits on PATH and the
+  shell reports command not found about an installed tool.
+- An **integration symlink** from Docker Desktop and similar resolves only while
+  that integration runs. The listing shows the tool; running it finds nothing.
+
+It names the winning path, what it beat, and which cause explains it. Then it
+reads your shell startup files to show which line put each directory on PATH,
+because knowing nvm beats Homebrew does not tell you which file to edit.
+
+## Why this exists separately from wsl-toolchain-doctor
+
+`wsl-toolchain-doctor` is the WSL specialist. This is the same engine with the
+platform gate removed, because the shadowing problem is not WSL's: it is the
+same shape on macOS with nvm and pyenv, and the cause differs by platform rather
+than the symptom.
+
+## Running it
+
+    rote play run which-actually-runs/main.ts
+    rote play run which-actually-runs/main.ts commands=poetry,rbenv
+    rote play run which-actually-runs/main.ts format=json
+    rote play run which-actually-runs/main.ts path_override="/usr/bin:/opt/homebrew/bin"
+
+## Testing
+
+Path classification is unit-tested against 17 real path shapes across macOS,
+Linux and WSL. Secret redaction is tested against 7 assignment forms. Detection
+of competing version managers was verified on a synthetic host with nvm, pyenv
+and asdf all on PATH at once, since this machine has none installed.
+
+Read-only. It parses the text of startup files and never sources them, so a
+malformed rc file cannot execute anything. A line assigning a secret-looking
+name is reported as present and never echoed.

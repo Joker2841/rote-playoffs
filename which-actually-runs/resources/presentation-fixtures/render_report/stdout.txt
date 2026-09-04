@@ -1,0 +1,51 @@
+WHICH ACTUALLY RUNS                                  2026-09-04 12:42 UTC
+
+  probes    ########################  2/2 ok
+
+  host      macos on arm64, 11 PATH entries (inherited)
+  managers  asdf, nvm, pyenv on PATH
+
+VERDICT  1 command(s) resolve to something that is not there or not native.
+
+WHAT WINS, AND WHAT IT BEAT
+  HIGH   docker     looks installed, resolves to nothing
+         /usr/local/bin/docker
+         target missing: /Applications/Docker.app/Contents/Resources/bin/docker
+  MEDIUM node       more than one copy on PATH
+         /Users/example/.nvm/versions/node/v20.11.0/bin/node
+         beats: /Users/example/.asdf/shims/node (asdf)
+         beats: /opt/homebrew/bin/node (homebrew (apple silicon))
+  MEDIUM python3    more than one copy on PATH
+         /Users/example/.pyenv/shims/python3
+         beats: /opt/homebrew/bin/python3 (homebrew (apple silicon))
+         beats: /usr/bin/python3 (system)
+
+WHERE YOUR PATH COMES FROM
+  ~/.zprofile:2    eval "$(/opt/homebrew/bin/brew shellenv)"
+  ~/.zshrc:40   export PATH="/opt/homebrew/bin:$PATH"
+  ~/.zshrc:55   export PATH="$HOME/.local/bin:$PATH"
+  ~/.zshrc:71   [redacted: line assigns a secret-looking name]
+
+WHY IT IS SHAPED THAT WAY
+  MEDIUM manager_initialized_twice
+         nvm is initialised in more than one startup file. Each one prepends its
+         shim directory, so the effective PATH depends on which files this shell
+         actually read.
+         at ~/.zshrc:12
+         at ~/.zprofile:6
+  MEDIUM multiple_version_managers
+         More than one version manager initialises here: asdf, homebrew, nvm,
+         pyenv. Whichever runs last wins, and that order is set by file, not by
+         intent.
+
+SCOPE
+  Read-only. It reads PATH, stats files, and parses the text of shell
+  startup files without ever sourcing them. Nothing is changed and no
+  command is repaired. A line assigning a secret-looking name is
+  reported as present but never echoed. Results describe the PATH of
+  the shell that invoked it, which is why a login shell and an editor
+  terminal can legitimately disagree.
+
+STAGES
+  ########  commands       ok
+  ########  shell config   ok

@@ -1,0 +1,27 @@
+{
+  "probe": "shadow",
+  "host": {"flavour": "macos", "system": "Darwin", "release": "24.0.0", "machine": "arm64"},
+  "path_source": "inherited",
+  "path_entry_count": 11,
+  "windows_entry_count": 0,
+  "duplicate_entry_count": 1,
+  "missing_entries": ["/Users/example/.rbenv/shims"],
+  "version_managers_on_path": ["asdf", "nvm", "pyenv"],
+  "commands": [],
+  "findings": [
+    {"severity": "high", "command": "docker", "kind": "broken_link",
+     "path": "/usr/local/bin/docker", "target": "/Applications/Docker.app/Contents/Resources/bin/docker",
+     "detail": "On PATH but the symlink target is missing. Typical of an integration that only populates its mount while running."},
+    {"severity": "medium", "command": "node", "kind": "shadowed",
+     "path": "/Users/example/.nvm/versions/node/v20.11.0/bin/node", "origin": "nvm",
+     "shadowed": ["/Users/example/.asdf/shims/node (asdf)", "/opt/homebrew/bin/node (homebrew (apple silicon))"],
+     "detail": "nvm wins; 2 other copies on PATH."},
+    {"severity": "medium", "command": "python3", "kind": "shadowed",
+     "path": "/Users/example/.pyenv/shims/python3", "origin": "pyenv",
+     "shadowed": ["/opt/homebrew/bin/python3 (homebrew (apple silicon))", "/usr/bin/python3 (system)"],
+     "detail": "pyenv wins; 2 other copies on PATH."},
+    {"severity": "low", "command": null, "kind": "duplicate_path_entry",
+     "path": "/opt/homebrew/bin",
+     "detail": "Duplicate PATH entry, usually an unguarded rc append."}
+  ]
+}

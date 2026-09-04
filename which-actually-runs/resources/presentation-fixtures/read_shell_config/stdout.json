@@ -1,0 +1,26 @@
+{
+  "probe": "shell_config",
+  "files_present": ["~/.zshrc", "~/.zprofile"],
+  "files": [
+    {"file": "~/.zshrc", "lines": 84, "path_assignments": 3, "sources": [],
+     "initializers": [{"manager": "nvm", "line": 12}, {"manager": "pyenv", "line": 20}, {"manager": "asdf", "line": 31}]},
+    {"file": "~/.zprofile", "lines": 9, "path_assignments": 2, "sources": [],
+     "initializers": [{"manager": "homebrew", "line": 2}, {"manager": "nvm", "line": 6}]}
+  ],
+  "managers": {"nvm": ["~/.zshrc:12", "~/.zprofile:6"], "pyenv": ["~/.zshrc:20"],
+               "asdf": ["~/.zshrc:31"], "homebrew": ["~/.zprofile:2"]},
+  "path_lines": [
+    {"file": "~/.zprofile", "line": 2, "text": "eval \"$(/opt/homebrew/bin/brew shellenv)\""},
+    {"file": "~/.zshrc", "line": 40, "text": "export PATH=\"/opt/homebrew/bin:$PATH\""},
+    {"file": "~/.zshrc", "line": 55, "text": "export PATH=\"$HOME/.local/bin:$PATH\""},
+    {"file": "~/.zshrc", "line": 71, "text": "[redacted: line assigns a secret-looking name]"}
+  ],
+  "findings": [
+    {"severity": "medium", "kind": "manager_initialized_twice", "manager": "nvm",
+     "places": ["~/.zshrc:12", "~/.zprofile:6"],
+     "detail": "nvm is initialised in more than one startup file. Each one prepends its shim directory, so the effective PATH depends on which files this shell actually read."},
+    {"severity": "medium", "kind": "multiple_version_managers",
+     "managers": ["asdf", "homebrew", "nvm", "pyenv"],
+     "detail": "More than one version manager initialises here: asdf, homebrew, nvm, pyenv. Whichever runs last wins, and that order is set by file, not by intent."}
+  ]
+}
