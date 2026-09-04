@@ -1,0 +1,62 @@
+{
+  "candidate_count": 2,
+  "candidates": [
+    {
+      "best_rank": 2.4,
+      "description": "Finds dependencies declared in a project that nothing imports, and imports that nothing declares. Reads the lockfile and the source, never installs.",
+      "downloads": 18,
+      "matched_queries": [
+        "unused",
+        "dependencies",
+        "unused dependencies"
+      ],
+      "name": "dependency-sweep",
+      "owner": "example-org",
+      "owner_kind": "org",
+      "published_at": "2026-09-02T09:00:00Z",
+      "quality": 1.0,
+      "reference": "example-org/dependency-sweep@0.3.1",
+      "tags": [
+        "domain-engineering",
+        "job-dependency-audit",
+        "effect-read-only"
+      ]
+    },
+    {
+      "best_rank": 0.3,
+      "description": "Lists every dependency licence in a project and flags copyleft obligations that reach your distributed artifact.",
+      "downloads": 3,
+      "matched_queries": [
+        "dependencies project"
+      ],
+      "name": "license-inventory",
+      "owner": "someone",
+      "owner_kind": "user",
+      "published_at": "2026-09-03T11:00:00Z",
+      "quality": 0.9,
+      "reference": "someone/license-inventory@0.1.0",
+      "tags": [
+        "domain-engineering",
+        "effect-read-only"
+      ]
+    }
+  ],
+  "content_words": [
+    "finds",
+    "unused",
+    "dependencies",
+    "project"
+  ],
+  "idea": "a play that finds unused dependencies in a project",
+  "probe": "search",
+  "queries_failed": [],
+  "queries_run": [
+    "a play that finds unused dependencies in a project",
+    "unused",
+    "dependencies",
+    "project",
+    "unused dependencies",
+    "unused project",
+    "dependencies project"
+  ]
+}

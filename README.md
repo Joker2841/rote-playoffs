@@ -1,12 +1,13 @@
 # rote-playoffs
 
-Four Plays for the Rote Playoffs, both about WSL, both read-only, both needing
+Five Plays for the Rote Playoffs, both about WSL, both read-only, both needing
 nothing but python3 and coreutils. No credentials, no network, no adapters.
 
     sai0000/wsl-toolchain-doctor    which commands are not the program you think
     sai0000/wsl-disk-reclaim        why the Windows drive is full when WSL is not
     sai0000/play-quality-doctor     why your Play's quality score is capped
     sai0000/which-actually-runs     which copy of a command actually runs, on any Unix
+    sai0000/is-it-taken             has someone already published the thing you are about to build
 
 ---
 
@@ -462,3 +463,53 @@ and asdf all on PATH at once, since this machine has none installed.
 Read-only. It parses the text of startup files and never sources them, so a
 malformed rc file cannot execute anything. A line assigning a secret-looking
 name is reported as present and never echoed.
+
+
+---
+
+# is-it-taken
+
+Answers the question worth asking before you write a line: has someone already
+published this.
+
+The public registry went from 242 Plays to 411 in twenty-four hours. Nobody can
+hold that in their head, and `rote play search` answers one query at a time
+using the words you happened to choose. This fans your idea into a dozen queries
+drawn from its own content words, then ranks what comes back by how close it
+actually is rather than by how popular it is. A Play with forty downloads
+sharing one incidental word is not a collision. A Play with three downloads
+whose name is your idea is.
+
+Four verdicts: **already built**, **crowded**, **adjacent work exists**, and
+**nothing close found** — the last deliberately not phrased as proof.
+
+## Why it exists
+
+I lost hours to exactly this mistake. I published `play-quality-doctor` without
+noticing that `himanshu-jha/play-quality-doctor` had existed for a day and a
+half under the same name, with the same finding. My own registry survey had used
+the vocabulary of the ideas I had already picked, never the one I later built.
+
+## What it cannot do
+
+Matching is lexical. Two people can describe the same idea in words that share
+nothing, and this will not connect them, so "nothing close found" means no
+lexical match rather than nothing built. That limit is printed in the output
+every run, along with any query that failed, because a failed query is not an
+empty result.
+
+## A bug the fixtures caught
+
+The first version scored "nothing close found" against a Play named
+`dependency-sweep` for an idea about "unused dependencies", because `dependency`
+and `dependencies` do not match as strings. A false all-clear is the most
+damaging thing this tool can produce, so it now stems both sides before
+comparing. The stemmer is crude and over-collapses, which is the safe direction.
+
+## Running it
+
+    rote play run is-it-taken/main.ts idea="what you are about to build"
+    rote play run is-it-taken/main.ts idea="..." format=json
+
+Read-only. It searches the public registry through rote, reads nothing local,
+and writes nothing.

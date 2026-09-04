@@ -1,0 +1,31 @@
+schema_version = 1
+
+# rote, because every result comes from the registry's own search rather than
+# any local index. If you can run a play you already have it; declared so the
+# dependency is visible rather than assumed.
+[[tools]]
+id = "rote"
+command = "rote"
+required = true
+
+[[tools.install]]
+manager = "sh"
+command = ["sh", "-c", "curl -fsSL https://getrote.dev/install | bash"]
+
+[[tools]]
+id = "python3"
+command = "python3"
+required = true
+version_requirement = ">=3.6"
+
+[[tools.install]]
+manager = "brew"
+package = "python@3.12"
+
+[[tools.install]]
+manager = "apt"
+package = "python3"
+
+[[tools.install]]
+manager = "dnf"
+package = "python3"
