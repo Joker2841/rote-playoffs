@@ -11,9 +11,14 @@ on a machine slightly larger than mine.
 
 Output budgets and their measured breaking points are documented per Play below.
 
+They were also read cold, as a stranger would, which caught a different class of
+problem: two of them counted findings in the header that the default output
+never listed, and one answered a question confidently and wrongly. Each is
+written up under the Play it belongs to.
 
-Five Plays for the Rote Playoffs, both about WSL, both read-only, both needing
-nothing but python3 and coreutils. No credentials, no network, no adapters.
+Five Plays for the Rote Playoffs. Two are WSL-specific, three run anywhere. All
+five are read-only and need nothing but python3 and coreutils. No credentials,
+no network except the registry search in `is-it-taken`, no adapters.
 
     sai0000/wsl-toolchain-doctor    which commands are not the program you think
     sai0000/wsl-disk-reclaim        why the Windows drive is full when WSL is not
@@ -99,6 +104,20 @@ first unreadable entry on a Windows root is reliably `$Recycle.Bin`.
 
 Both are fixed. They are described here because a diagnostic that hides how it
 was wrong is harder to trust than one that shows it.
+
+## A third correction, found by reading the output cold
+
+The header counted `9 medium, 11 low, 2 info` and the report listed nine and
+two. The eleven low findings were computed, counted, and then filtered out of
+the text by a `high, medium` check in the renderer, so they existed only in the
+JSON. A stranger could count what was on screen and find eleven missing.
+
+They are now listed, grouped by kind because they repeat heavily. The counts
+also come from every finding rather than the filtered set, so raising
+`min_severity` no longer quietly shrinks the totals; it says `(showing medium
+and above)` instead. `which-actually-runs` had the same bug and hid thirteen
+findings, which mattered more there because those findings are the question the
+Play is named for.
 
 ## Fixtures
 
@@ -195,204 +214,28 @@ one field at a time, because I had not found that the command existed. It was
 listed in `rote play --help` the whole time.
 
 That reconstruction produced roughly correct totals from a structurally wrong
-model. It invented a `discoverability` signal worth 0.12 that does not exist:
-tags are one input to `frontmatter_completeness`, scored at partial credit. That
-is also the real reason for an interaction I had measured and could not explain,
-where removing tags and version together cost less than the sum of removing each
-alone. They were never separate signals. It missed `response_id_leak` entirely
-and had the weights wrong for `parametrization` and `dag_structure`.
+model:
 
-Chi blu pointed out the command in the Rote Playoffs Discord. The model is gone.
-`tools/derive_rubric.py` is kept and marked superseded, because the mutation
-method is still reasonable for probing an undocumented scorer, and because
-deleting the evidence of a wrong turn is worse than leaving it in.
+    output_format             0.25   correct
+    frontmatter_completeness  0.25   correct, but modelled as all-or-nothing
+    parametrization           0.13   actually 0.25
+    discoverability           0.12   not a signal at all
+    provenance_url            0.10   correct
+    dag_structure             0.08   actually 0.05
+                                     response_id_leak 0.05 was missed entirely
 
-## Why this exists
+The invented `discoverability` signal is also the real reason for an interaction
+I had measured and could not explain, where removing tags and version together
+cost less than the sum of removing each alone. They were never separate signals:
+tags are one input to `frontmatter_completeness`, which is scored at partial
+credit.
 
-WSL appends the Windows PATH to the Linux PATH by default, and interop makes
-Windows executables reachable. That produces three failures that look identical
-in a terminal, and the fix for each is different:
+Chi blu pointed out the command in the Rote Playoffs Discord. The model is gone
+from the Play, which calls the real scorer. `tools/derive_rubric.py` is kept and
+marked superseded, because the mutation method is still reasonable for probing
+an undocumented scorer, and because deleting the evidence of a wrong turn is
+worse than leaving it in.
 
-1. A command resolves to an extensionless Windows shim under `/mnt/c` and runs
-   as a Windows program. `docker` with a bind mount then hands a Windows client
-   a Linux path it cannot see.
-2. A command does not resolve at all, while its `.exe` sits on PATH. The shell
-   says "command not found" about a tool that is plainly installed. This is the
-   most confusing symptom of the three.
-3. A command is a symlink into `/mnt/wsl` left by a Docker Desktop style
-   integration, which fills that path only while it is running. Listing the
-   directory shows the tool. Running it finds nothing, and a Windows copy
-   further down PATH silently takes over.
-
-Separating those is the point.
-
-## What it reports
-
-- Which watched command wins, the exact path, and what it beat.
-- The configuration behind it: `appendWindowsPath`, drive mounts missing the
-  `metadata` option so `chmod` appears to succeed and does nothing,
-  case-insensitive mounts that collapse two tracked files into one, and whether
-  your home and project sit on the slow 9p filesystem.
-- Its own scope. It reports the PATH of the shell that invoked it and says so.
-
-On a host that is not WSL it returns a single applicability verdict rather than
-inventing findings.
-
-## Running it
-
-    rote play run wsl-toolchain-doctor/main.ts
-
-Optional parameter, comma separated, added to the built-in watchlist:
-
-    rote play run wsl-toolchain-doctor/main.ts commands=poetry,rbenv,deno
-
-## Layout
-
-    wsl-toolchain-doctor/
-      main.ts                  frontmatter steps + presentation
-      deps.toml                declares python3
-      resources/
-        probe_platform.py      WSL flavour and interop state
-        probe_shadow.py        PATH resolution across the watchlist
-        probe_traps.py         wsl.conf, drive mounts, case sensitivity
-        render.py              joins the three into one briefing
-        presentation-fixtures/ representative evidence for lint
-
-The three probes are independent root steps and run in parallel. The renderer
-depends on all three.
-
-## Two corrections kept on the record
-
-The first version of the command probe assumed bash appends `.exe` when
-resolving a bare name. It does not; only an exact filename resolves. That made
-it report `python`, `java`, `psql`, `kubectl` and `redis-cli` as actively
-running Windows programs when they do not resolve at all. Checking `kubectl`
-against ground truth exposed the mistake, and also turned up the dangling
-`/mnt/wsl` symlink case, which became the most useful finding in the Play.
-
-The first version of the configuration probe treated every mountpoint under
-`/mnt/` as a Windows drive, sweeping in WSL's own tmpfs and iso9660 plumbing and
-producing sixteen identical warnings. It also read `/mnt/c` as case sensitive,
-because `os.path.exists` returns False for a permission-denied path and the
-first unreadable entry on a Windows root is reliably `$Recycle.Bin`.
-
-Both are fixed. They are described here because a diagnostic that hides how it
-was wrong is harder to trust than one that shows it.
-
-## Fixtures
-
-The fixtures under `presentation-fixtures/` are synthetic and use generic paths.
-A real run names the machine's actual software and its Windows user directory,
-which does not belong in a public artifact.
-
-## Licence
-
-MIT
-
-
----
-
-# wsl-disk-reclaim
-
-Answers a different question on the same machine: why is the Windows drive full
-when the distro says it is not.
-
-A WSL2 distro lives in a virtual disk that grows on demand and never shrinks on
-its own. Delete forty gigabytes inside and the file Windows sees stays exactly
-as large as it ever got. `df`, run inside, reports only the inside view, so the
-space is invisible from the one place people look for it.
-
-## What it reports
-
-- Each virtual disk on the Windows side, sized, and what the distro admits to
-  using inside. The gap is what a compaction would give back.
-- The caches inside worth clearing, with nesting marked so a parent directory
-  and its child are never counted twice.
-- Commands, in the order that works. Freeing space inside does nothing to the
-  Windows file until the image is compacted, and compacting before freeing
-  reclaims almost nothing. That ordering is why people try one half, see no
-  change, and conclude the whole thing is a myth.
-
-## Running it
-
-    rote play run wsl-disk-reclaim/main.ts
-    rote play run wsl-disk-reclaim/main.ts format=json threshold_mb=1000
-    rote play run wsl-disk-reclaim/main.ts extra_paths=~/work/node_modules
-
-## Two more corrections kept on the record
-
-The first version summed both virtual disks and subtracted the distro's inside
-usage, which counted Docker Desktop's live data as reclaimable and overstated
-the answer by about 50 GB. Docker keeps a separate disk whose interior is not
-visible from inside the distro, so it is now reported on its own terms with a
-pointer to `docker system df`.
-
-The second version double-counted caches: `~/.cache/pip` and
-`~/.cache/ms-playwright` both sit inside `~/.cache`, so the total claimed 12.25
-GB where the honest figure was 6.92 GB. Nested paths are now detected and
-excluded from the total, and labelled in the output.
-
-Both were caught by checking the numbers against the machine rather than
-trusting them. A tool that tells you how much space you can get back is worth
-nothing if the number is inflated.
-
-
----
-
-# play-quality-doctor
-
-Answers one question about a published Play: why is its quality score capped,
-when nothing is telling you.
-
-`rote play validate` prints a score, reports zero errors and zero warnings, says
-Pass, and stops. If the score is 0.65 it will not say which signal is
-unsatisfied, what it wanted, or what the missing field is worth.
-
-## How the rules were derived, and how to check them
-
-The rubric is not published, so it was reconstructed. A Play scoring 1.00 was
-mutated one field at a time and the score read back from `rote play validate`.
-
-    output_format             0.25   top-level output: OR metadata.contract.output
-    frontmatter_completeness  0.25   metadata.version
-    parametrization           0.13   at least one parameter
-    discoverability           0.12   top-level tags:
-    provenance_url            0.10   top-level source:
-    dag_structure             0.08   a steps: block
-
-**Do not take these on trust.** `tools/derive_rubric.py` re-derives them against
-any Play of your own that scores 1.00. It copies the package, removes one field
-at a time, and prints what each is worth. `--pairs` also tests combinations.
-
-    python3 tools/derive_rubric.py ~/.rote/flows/<a-play-scoring-1.00> --pairs
-
-## How strong the evidence actually is
-
-Weaker than a list of six clean numbers suggests, so here is what was really
-done. The weights were fitted on one control. They were then tried against five
-published Plays: two predicted correctly first time, and three were mispredicted
-and each revealed a signal the model was missing. So the genuinely held-out
-evidence is two Plays, not five. The three mispredictions are what produced the
-top-level `output:` alternative, `parametrization`, and `dag_structure`.
-
-One interaction is measured, not assumed. With `metadata.version` absent,
-`discoverability` is not scored at all:
-
-    tags missing only            0.88
-    version missing only         0.75
-    both missing                 0.75      not 0.63
-
-An earlier version of this model treated the weights as freely additive and
-overstated the loss by 0.12 in exactly that case, which falls in the 0.3-0.5
-band where the Plays that most need this sit.
-
-One residual is unexplained. `modiqo/hello` scores 0.45 where this predicts
-0.40. No adjustment fixes it without breaking `expedition-cache-invalidator`, so
-a factor is still unaccounted for and the report says so rather than hiding it.
-
-Fields that turn out to be worth nothing to the score: `license`,
-`provenance.url`, `presentation_fixtures`, `depends_on`, `timeout_ms`, and
-description length.
 
 ## Why this exists
 
@@ -510,7 +353,7 @@ lexical match rather than nothing built. That limit is printed in the output
 every run, along with any query that failed, because a failed query is not an
 empty result.
 
-## Two bugs, and how each was found
+## Three bugs, and how each was found
 
 The fixtures caught the first.
 
@@ -531,6 +374,34 @@ was probably truncated instead of exiting silently.
 
 The lesson generalises: test the artifact a stranger receives, not the one in
 your working tree.
+
+Reading the output cold caught the third, and it was the worst of them. Asked
+about "find which copy of a command runs first on PATH", it answered **already
+built** and named four Plays: one about duplicated Python files, one about pull
+request diffs, one about setup instructions, one about GitHub issues. None of
+them do this. They shared a single word with the idea - `copy`, `first`, `find`
+- and a shared word in a two-word name was enough to score 0.5, which was the
+threshold for declaring a collision. The Play that actually matched, my own
+`which-actually-runs`, did not appear at all.
+
+Two things were wrong. Words were counted equally, so `first` weighed the same
+as `dependency`, and a name is short enough that one common word is most of it.
+Both are fixed: words are now weighted by how rare they are across the retrieved
+candidates, and **already built** requires at least two independently shared
+name words. One shared word now caps at "adjacent", which still puts the Play in
+front of you to read.
+
+One correction attempt is worth recording because it failed. To undo the fact
+that the queries are built from the idea, and so over-represent its own words, I
+measured each word's frequency only over the candidates that some *other* query
+found. That is unbiased in principle and wrong in practice: if search returns
+nearly every Play containing a word, the complement holds none of them, and the
+word scores as maximally rare. It promoted `first` from common to strong
+evidence and brought the false verdict straight back. The weighting is
+deliberately simple now, and the verdict rests on the structural rule instead.
+
+When every word in an idea is common in the results, the output says so and
+asks you to rephrase, rather than ranking on words that carry no signal.
 
 ## Running it
 

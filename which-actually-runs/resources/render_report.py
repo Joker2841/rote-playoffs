@@ -117,6 +117,32 @@ def main():
             lines.append("         beats: %s" % shadowed)
     lines.append("")
 
+    # Low findings answer the same question the play is named for, so they are
+    # listed rather than only counted. Grouped, one line of evidence each.
+    quiet = [f for f in shadow.get("findings", []) if f.get("severity") == "low"]
+    if quiet:
+        resolved = sorted([f for f in quiet if f.get("kind") == "shadowed"],
+                          key=lambda f: f.get("command") or "")
+        other = [f for f in quiet if f.get("kind") != "shadowed"]
+        lines.append("ALSO RESOLVED, NOTHING WRONG")
+        for finding in resolved[:40]:
+            beaten = len(finding.get("shadowed") or [])
+            lines.append("  %-10s %s wins, over %d other cop%s on PATH"
+                         % (finding.get("command") or "-",
+                            finding.get("origin") or "the first",
+                            beaten, "y" if beaten == 1 else "ies"))
+            lines.append("         %s" % finding.get("path", ""))
+        if len(resolved) > 40:
+            lines.append("  ... and %d more, all resolving to a single working copy"
+                         % (len(resolved) - 40))
+        for finding in other:
+            lines.append("  %s" % finding.get("kind", ""))
+            lines.append("         %s"
+                         % " ".join((finding.get("detail") or "").split()))
+            if finding.get("path"):
+                lines.append("         %s" % finding["path"])
+        lines.append("")
+
     path_lines = config.get("path_lines", [])
     if path_lines:
         lines.append("WHERE YOUR PATH COMES FROM")

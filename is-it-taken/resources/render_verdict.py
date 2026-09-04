@@ -42,7 +42,10 @@ def block(title, rows, lines):
             for wrapped in textwrap.wrap(summary, width=70):
                 lines.append("        " + wrapped)
         if row.get("shared_name_words"):
-            lines.append("        shares in the name: %s" % ", ".join(row["shared_name_words"]))
+            common = set(row.get("common_shared_words") or [])
+            shown = ["%s (common here)" % w if w in common else w
+                     for w in row["shared_name_words"]]
+            lines.append("        shares in the name: %s" % ", ".join(shown))
     lines.append("")
 
 

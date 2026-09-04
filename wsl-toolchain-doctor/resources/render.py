@@ -151,10 +151,15 @@ def main():
     level = worst(actionable) if actionable else "clean"
 
     lines.append(f"VERDICT  {VERDICT_TEXT[level]}")
+    # Counts come from every finding, not the filtered set, so raising the
+    # floor never makes an unchecked machine look clean. What the floor hid
+    # is said out loud rather than silently subtracted.
     counts = {}
-    for finding in findings:
+    for finding in all_findings:
         counts[finding.get("severity", "info")] = counts.get(finding.get("severity", "info"), 0) + 1
     summary = ", ".join(f"{counts[s]} {s}" for s in ("high", "medium", "low", "info") if s in counts)
+    if floor != "info":
+        summary += f"   (showing {floor} and above)"
     lines.append(f"  {summary or 'nothing to report'}")
     lines.append("")
 
@@ -185,6 +190,30 @@ def main():
         for shadowed in finding.get("shadowed", []) or []:
             lines.append(f"         shadows: {shadowed}")
     lines.append("")
+
+    # The header counts every severity, so the low ones have to appear
+    # somewhere or the counts promise more than the report delivers. They
+    # repeat heavily, so they are grouped by kind rather than listed one by
+    # one. The floor has already been applied to shadow["findings"] above.
+    quiet = [f for f in shadow.get("findings", []) if f.get("severity") == "low"]
+    if quiet:
+        lines.append("ALSO SEEN")
+        by_kind = {}
+        for finding in quiet:
+            by_kind.setdefault(finding.get("kind", ""), []).append(finding)
+        for kind in sorted(by_kind):
+            group = by_kind[kind]
+            subjects = [f.get("command") or f.get("path") or "" for f in group]
+            subjects = [s for s in subjects if s]
+            noun = "command" if group[0].get("command") else "entry"
+            lines.append(f"  LOW    {kind}  {len(group)} {noun}"
+                         + ("s" if len(group) != 1 else ""))
+            detail = " ".join(str(group[0].get("detail", "")).split())
+            for wrapped in textwrap.wrap(detail, width=78):
+                lines.append("         " + wrapped)
+            for wrapped in textwrap.wrap(", ".join(sorted(subjects)), width=78):
+                lines.append("         " + wrapped)
+        lines.append("")
 
     lines.append("WHY")
     trap_findings = sorted(traps.get("findings", []),
