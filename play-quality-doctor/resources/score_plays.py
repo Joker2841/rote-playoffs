@@ -130,6 +130,41 @@ def main():
             entry["lost"] = round(entry["lost"] + item["lost"], 3)
 
     versions = sorted({r.get("scorer_version") for r in scored if r.get("scorer_version")})
+
+    # rote truncates a process step's stdout at 65536 bytes, silently and mid
+    # JSON. This grows at roughly 670 bytes per play, so a store of about a
+    # hundred installed plays would overflow and the renderer would fail to
+    # parse. Trim to a budget, worst-scoring plays kept, and say what was
+    # dropped rather than letting the report look complete.
+    BUDGET = 48000
+
+    def emit(rows, note):
+        return json.dumps({
+            "probe": "score",
+            "scorer_version": versions[0] if len(versions) == 1 else (versions or None),
+            "target": located.get("target"),
+            "unresolved": located.get("unresolved", []),
+            "total": len(results),
+            "scored": len(scored),
+            "capped": len(capped),
+            "at_full": len(scored) - len(capped),
+            "reported": len(rows),
+            "omitted": note,
+            "signal_cost": cost,
+            "results": rows,
+        }, indent=2, sort_keys=True)
+
+    ordered = sorted(results, key=lambda r: r.get("score", 1.0))
+    text = emit(ordered, 0)
+    while len(text) > BUDGET and len(ordered) > 5:
+        step = max(1, len(ordered) // 10)
+        ordered = ordered[:-step]
+        text = emit(ordered, len(results) - len(ordered))
+    print(text)
+    return 0
+
+
+def _unused_original(results, scored, capped, cost, versions, located):
     print(json.dumps({
         "probe": "score",
         "scorer_version": versions[0] if len(versions) == 1 else (versions or None),

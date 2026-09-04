@@ -43,7 +43,7 @@
  *   default: '1.0'
  *   description: Only list plays predicted below this score. Totals still cover every audited play, so filtering never hides how many were checked.
  * metadata:
- *   version: 0.3.0
+ *   version: 0.3.1
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic

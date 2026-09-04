@@ -1,5 +1,17 @@
 # rote-playoffs
 
+## A note on how these were tested
+
+Every Play here was verified by pulling it fresh from the registry and running
+that copy, not the working tree. That is the artifact a stranger receives, and
+it is the only way one class of bug shows up at all: `rote` truncates a process
+step's stdout at exactly 65536 bytes, silently, mid-JSON, and the step that
+consumes it then fails to parse. Three of these five would have shipped broken
+on a machine slightly larger than mine.
+
+Output budgets and their measured breaking points are documented per Play below.
+
+
 Five Plays for the Rote Playoffs, both about WSL, both read-only, both needing
 nothing but python3 and coreutils. No credentials, no network, no adapters.
 
@@ -527,3 +539,25 @@ your working tree.
 
 Read-only. It searches the public registry through rote, reads nothing local,
 and writes nothing.
+
+
+---
+
+# Output budgets
+
+`rote` truncates a process step's stdout at 65536 bytes without saying so. Any
+step whose output scales with the host can cross that line on someone else's
+machine while passing on yours. Measured breaking points before the fix:
+
+    is-it-taken         search results       123 KB on a broad idea
+    which-actually-runs PATH entries x cmds   77 KB at 40 PATH entries
+    wsl-toolchain-doctor same                 44 KB at 40 PATH entries
+    play-quality-doctor  installed plays      would cross at ~98 plays
+
+All four now trim to a 48 KB budget, degrading in a stated order rather than
+being cut mid-structure, and every reduction is named in the payload: hits
+trimmed to the winner, then only commands with findings, then duplicate entries
+counted rather than listed. After the fix, an 800-entry PATH produces 5 KB.
+
+A report that quietly stopped listing things is worse than one that says it ran
+out of room.

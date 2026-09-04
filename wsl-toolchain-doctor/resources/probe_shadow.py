@@ -231,7 +231,18 @@ def main():
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: (order.get(f["severity"], 9), f["kind"], f["command"] or ""))
 
-    print(json.dumps({
+    # rote truncates a process step's stdout at 65536 bytes, silently and mid
+    # JSON, and the step that consumes it then fails to parse. This output
+    # scales with PATH entries times watched commands: 26 KB at 37 entries on
+    # the machine it was written on, 77 KB at 40 entries whose directories all
+    # hold the watched tools. So it is trimmed to a budget before printing,
+    # least useful detail first, and any reduction is named in the payload
+    # rather than left for the reader to notice.
+    BUDGET = 48000
+
+    def emit(cmds, detail):
+        commands = cmds
+        return json.dumps({
         "probe": "shadow",
         "path_source": "supplied" if path_override() else "inherited",
         "path_entry_count": len(entries),
@@ -239,8 +250,51 @@ def main():
         "duplicate_entry_count": sum(1 for e in entries if e["duplicate_of"] is not None),
         "missing_entries": [e["path"] for e in entries if not e["exists"]],
         "commands": commands,
+            "detail_level": detail,
         "findings": findings,
-    }, indent=2, sort_keys=True))
+    }, indent=2, sort_keys=True)
+
+    detail = "full"
+    text = emit(commands, detail)
+    if len(text) > BUDGET:
+        commands = [dict(c, bare_hits=c["bare_hits"][:1],
+                         windows_extension_hits=c["windows_extension_hits"][:1])
+                    for c in commands]
+        detail = "hits trimmed to the winning copy per command"
+        text = emit(commands, detail)
+    if len(text) > BUDGET:
+        flagged = {f.get("command") for f in findings}
+        commands = [c for c in commands if c["command"] in flagged]
+        detail = "only commands with a finding are listed"
+        text = emit(commands, detail)
+    if len(text) > BUDGET:
+        # The findings themselves can dominate on a pathological PATH: one
+        # duplicate entry finding per repeat, and a long shadowed list per
+        # command. Collapse the repeats into a single counted finding and cap
+        # the lists, then drop the least severe findings until it fits. Every
+        # reduction is named, because a report that quietly stopped listing
+        # things is worse than one that says it ran out of room.
+        dupes = [f for f in findings if f.get("kind") == "duplicate_path_entry"]
+        if len(dupes) > 3:
+            findings = [f for f in findings if f.get("kind") != "duplicate_path_entry"]
+            findings.append({
+                "severity": "low", "command": None, "kind": "duplicate_path_entry",
+                "path": "%d duplicate PATH entries" % len(dupes),
+                "detail": ("%d duplicate PATH entries, listed as a count rather than "
+                           "individually. Usually an rc file appended in a loop."
+                           % len(dupes)),
+            })
+        findings = [dict(f, shadowed=(f.get("shadowed") or [])[:3]) if f.get("shadowed") else f
+                    for f in findings]
+        detail = "findings condensed; duplicate PATH entries counted, not listed"
+        commands = []
+        text = emit(commands, detail)
+    while len(text) > BUDGET and len(findings) > 5:
+        findings = findings[:max(5, int(len(findings) * 0.8))]
+        detail = "output exceeded its budget; only the %d most severe findings are shown" % len(findings)
+        text = emit(commands, detail)
+    print(text)
+
 
 
 if __name__ == "__main__":

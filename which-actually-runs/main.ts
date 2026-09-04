@@ -44,7 +44,7 @@
  *   - json
  *   description: text for the human briefing, json for a machine-readable report.
  * metadata:
- *   version: 0.1.0
+ *   version: 0.1.1
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic

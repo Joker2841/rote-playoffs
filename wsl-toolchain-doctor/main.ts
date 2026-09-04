@@ -51,7 +51,7 @@
  * - windows-interop
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.2.1
+ *   version: 0.2.2
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
