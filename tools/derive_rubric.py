@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Re-derive the rote quality rubric yourself. Do not take my weights on trust.
+"""SUPERSEDED. Use `rote play score <main.ts>` instead.
+
+`rote play score` reports every signal with its weight and status and is
+authoritative. It existed the whole time; I had not found it, so I built this
+to reconstruct the rubric from the outside. The reconstruction produced roughly
+correct totals from a structurally wrong model: it invented a "discoverability"
+signal that does not exist, when tags are actually one input to
+frontmatter_completeness under partial credit. Kept in the repository because
+the mutation method is still a reasonable way to probe an undocumented scorer,
+and because deleting the evidence of a wrong turn is worse than leaving it.
+
+Original description follows.
+
+Re-derive the rote quality rubric yourself. Do not take my weights on trust.
 
 Point this at any play package that currently scores 1.00. It copies the
 package, removes one frontmatter field at a time, runs `rote play validate`

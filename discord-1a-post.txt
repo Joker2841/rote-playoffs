@@ -1,0 +1,35 @@
+rote 0.78.0, WSL2 Ubuntu 24.04.
+
+`rote play validate` reports a capped score as a clean pass. Zero errors, zero warnings, `OK: Play validation passed!`, and a score of 0.65 with no indication of which signal is unsatisfied or what the missing field is worth.
+
+Mine sat at 0.88 for hours looking like this:
+
+```
+  Quality score: 0.88 (Pass)
+OK: Play validation passed!
+  Signals evaluated: 7
+```
+
+Nothing there, or in `rote play lint`, says the cap came from `tags:` sitting under `metadata.discoverability.tags` instead of at the top level. That is the shape `rote workspace export` generates, so the exporter emits Plays the scorer marks down and neither tool mentions it.
+
+Of the ten Plays installed here, six are capped. All six validate clean.
+
+Weights, derived by taking a Play scoring 1.00 and removing one field at a time:
+
+```
+output_format             0.25  top-level output: OR metadata.contract.output
+frontmatter_completeness  0.25  metadata.version
+parametrization           0.13  at least one parameter
+discoverability           0.12  top-level tags:
+provenance_url            0.10  top-level source:
+dag_structure             0.08  a steps: block
+```
+
+Worth nothing: `license`, `provenance.url`, `presentation_fixtures`, `depends_on`, `timeout_ms`, description length.
+
+Two are surprising: `discoverability` ignores `metadata.discoverability.tags` and reads only top-level `tags:`, and `provenance_url` reads top-level `source:`, not `provenance.url`.
+
+Re-derive it yourself against any Play of yours scoring 1.00 rather than trusting my numbers:
+https://github.com/Joker2841/rote-playoffs/blob/main/tools/derive_rubric.py
+
+Ask: have `validate` name the unsatisfied signals and their weights, the way `lint` names violations. The score is already computed. Only the explanation is missing.

@@ -1,50 +1,41 @@
-PLAY QUALITY DOCTOR                                  2026-09-03 16:54 UTC
+PLAY QUALITY DOCTOR                                  2026-09-04 11:22 UTC
 
-  audited   ########################  2 play(s)
+  scored    ########################  2 play(s), rubric 1.1.0
 
-VERDICT  1 of 2 audited play(s) are capped below 1.00.
-  rote play validate reports Pass with no error and no warning
-  for every one of them. The cap is silent.
+VERDICT  1 of 2 play(s) are below 1.00.
+  rote play validate calls every one of these a clean pass.
 
-WHAT IS COSTING THE MOST
-  -0.25  output_format              1 play(s)   needs an output contract
-  -0.12  discoverability            1 play(s)   needs a top-level tags: block
-  -0.10  provenance_url             1 play(s)   needs a top-level source: URL
+WHAT IT IS COSTING YOU, ACROSS EVERY PLAY
+  -0.25 total  output_format              1 play(s)   weight 0.25
+  -0.12 total  frontmatter_completeness   1 play(s)   weight 0.25
 
 PER PLAY
-  0.53  report-builder                   -0.47
-        -0.25 output_format
-        -0.12 discoverability
-        -0.10 provenance_url
+  0.62  report-builder
+        -0.250 output_format              No output contract declared (optional, needed for composition)
+        -0.125 frontmatter_completeness   Required fields present; missing optional: tags, discoverability
 
-HOW TO FIX EACH ONE
-  output_format  (-0.25)
-      Add an output contract. Either a top-level `output:` block, or `output:`
-      nested under `metadata.contract:`. Both satisfy it; declare format and
-      destination.
-  discoverability  (-0.12)
-      Add a top-level `tags:` list. Tags under `metadata.discoverability.tags`
-      do NOT satisfy this, and that is the shape the exporter generates, so most
-      plays have the tags in the wrong place. One tag is enough to pass; keep
-      the discoverability block as well.
-  provenance_url  (-0.10)
-      Add a top-level `source:` URL pointing at where the play comes from.
-      `provenance.url` does not satisfy this despite the signal name.
+WHAT TO TYPE
+  frontmatter_completeness
+      If the detail names tags or discoverability, the fix is a TOP-LEVEL
+      `tags:` list. Tags under `metadata.discoverability.tags` do not count
+      toward this signal, and that is the shape `rote workspace export`
+      generates, so a play can carry nine tags and still be marked down. Keep
+      the discoverability block as well; add the top-level one.
+  output_format
+      Declare an output contract: an `output:` block with format and
+      destination, either at the top level or nested under `metadata.contract:`.
+      Both satisfy this signal.
 
-METHOD AND ITS LIMITS
-  The rubric is not published. These weights were derived by taking a play
-  that scored 1.00, removing one frontmatter field at a time, and reading
-  the score back from rote play validate. They were then refined against
-  five published plays: two were predicted correctly first time, and three
-  were mispredicted and revealed additional signals, so treat the genuinely
-  held-out evidence as two plays rather than five. One interaction is
-  measured rather than assumed: with metadata.version absent,
-  discoverability is not scored, so those two weights do not add. A known
-  residual: modiqo/hello scores 0.45 where this predicts 0.40, and no
-  adjustment fixes it without breaking another play, so a factor here is
-  still unaccounted for. This is a model of the scorer, not the scorer. rote
-  play validate is authoritative; where they disagree, this is wrong. Do not
-  take the weights on trust: tools/derive_rubric.py in the source repository
-  re-derives them against any play of your own that scores 1.00.
+WHERE THESE NUMBERS COME FROM
+  Every score here is rote's own, from `rote play score --format json`,
+  which reports each signal with its weight and status and is authoritative.
+  This play runs it across every play you have rather than one at a time,
+  ranks the signals by what they are actually costing you, and adds the
+  exact edit for the ones whose required shape is not obvious from the
+  wording. Run `rote play score <main.ts>` yourself on any single play; the
+  numbers will match, because they are the same numbers. Thanks to Chi blu
+  in the Rote Playoffs Discord for pointing out that this command existed:
+  an earlier version of this play reconstructed the rubric from the outside
+  and got its structure wrong.
 
-  Read-only: no play is modified. Frontmatter parsed with yaml.
+  Read-only: no play is modified.

@@ -4,7 +4,7 @@
  * ---
  * name: play-quality-doctor
  * source: https://github.com/Joker2841/rote-playoffs/tree/main/play-quality-doctor
- * description: 'Answers one question about a published Play: why is its quality score capped, when nothing is telling you. rote play validate prints a score, reports zero errors and zero warnings, says Pass, and stops. If the score is 0.65 it will not say which signal is unsatisfied, what it wanted instead, or what the missing field is worth. Six of the ten Plays this was first run against were capped, and every one of them validated clean. The rubric is not published, so this reconstructs it: the rules here were derived by mutating a Play that scored 1.00, removing one field at a time and reading the score back from validate, then refined against five published Plays: two were predicted correctly first time and three were mispredicted and revealed further signals, so the genuinely held-out evidence is two Plays, not five. One interaction is measured rather than assumed: with metadata.version absent, discoverability is not scored, so those weights do not simply add. One residual is unexplained, and the report says so. Two of the findings are counterintuitive enough to be worth stating up front. Tags declared under metadata.discoverability.tags do not satisfy the discoverability signal, and that is exactly the shape the workspace exporter generates, so a Play can carry nine tags and still lose the points. And the signal named provenance_url reads a top-level source field, not provenance.url, which is the field its name points at. This reports every unsatisfied signal with its weight, the exact edit that clears it, and a predicted score, for one Play or every Play installed locally. It is a model of the scorer rather than the scorer, and it says so: rote play validate stays authoritative, and where the two disagree the model is what is wrong. Read-only by construction. It reads frontmatter and nothing else, modifies no Play, needs no credentials and no network, and uses pyyaml only when it is already importable, falling back to a structural scan so that running it never requires installing anything.'
+ * description: 'Runs rote''s own quality scorer across every Play you have, ranks the signals by what they are actually costing you, and tells you what to type to clear each one. rote play score reports a single Play''s signals with their weights and status, and it is authoritative; what it does not do is run over a whole shelf, total the damage, or say which edit fixes a finding whose required shape is not obvious from the wording. Of the ten Plays installed when this was written, six scored below 1.00 and every one of them was reported as a clean pass by rote play validate: zero errors, zero warnings, Pass, and no mention that anything was unsatisfied. That gap between validate and score is the reason this exists. Two findings are worth stating because their wording does not lead you to the fix. When frontmatter_completeness reports missing optional: tags, discoverability, the required shape is a top-level tags list; tags under metadata.discoverability.tags do not count toward the signal, and that is exactly the shape rote workspace export generates, so a Play can carry nine tags and still be marked down. And provenance_url reads a top-level source field rather than provenance.url, which is the field its name points at. This reports every unsatisfied signal for one Play or all of them, with rote''s own detail string, the points lost, and the edit that clears it. It computes nothing itself: run rote play score on any single Play and the numbers will match, because they are the same numbers. Read-only by construction. It reads frontmatter through rote, modifies no Play, and needs no credentials and no network. An earlier version reconstructed the rubric from the outside because I had not found rote play score; that model got the structure wrong, and Chi blu in the Rote Playoffs Discord pointed out the command. It is gone, and this wraps the real scorer instead.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
  *   url: https://github.com/Joker2841/rote-playoffs
@@ -43,7 +43,7 @@
  *   default: '1.0'
  *   description: Only list plays predicted below this score. Totals still cover every audited play, so filtering never hides how many were checked.
  * metadata:
- *   version: 0.2.0
+ *   version: 0.3.0
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
@@ -70,7 +70,7 @@
  *     - effect-read-only
  * presentation_fixtures:
  *   locate_plays: resources/presentation-fixtures/locate_plays/fixture.yaml
- *   audit_rubric: resources/presentation-fixtures/audit_rubric/fixture.yaml
+ *   score_plays: resources/presentation-fixtures/score_plays/fixture.yaml
  *   render_report: resources/presentation-fixtures/render_report/fixture.yaml
  * steps:
  *   locate_plays:
@@ -81,24 +81,24 @@
  *     - '@resource{locate_plays.py}'
  *     - $play
  *     - $flows_root
- *   audit_rubric:
+ *   score_plays:
  *     type: process.exec
- *     timeout_ms: 120000
+ *     timeout_ms: 900000
  *     depends_on:
  *     - locate_plays
  *     argv:
  *     - python3
- *     - '@resource{audit_rubric.py}'
+ *     - '@resource{score_plays.py}'
  *     - '@locate_plays{.stdout.text}'
  *   render_report:
  *     type: process.exec
  *     timeout_ms: 60000
  *     depends_on:
- *     - audit_rubric
+ *     - score_plays
  *     argv:
  *     - python3
  *     - '@resource{render_report.py}'
- *     - '@audit_rubric{.stdout.text}'
+ *     - '@score_plays{.stdout.text}'
  *     - $format
  *     - $min_score
  * ---
@@ -143,7 +143,7 @@ function statusOf(step: ReturnType<typeof ctx.step>): string {
 }
 
 const locate = ctx.step(stepName("locate_plays"));
-const auditStep = ctx.step(stepName("audit_rubric"));
+const auditStep = ctx.step(stepName("score_plays"));
 const report = ctx.step(stepName("render_report"));
 
 const rendered = stdoutOf(report);
@@ -163,7 +163,7 @@ if (rendered !== null) {
   out.human(
     "The quality report could not be rendered. Stage status: " +
       `locate_plays ${statusOf(locate)}; ` +
-      `audit_rubric ${statusOf(auditStep)}; ` +
+      `score_plays ${statusOf(auditStep)}; ` +
       `render_report ${statusOf(report)}.`,
   );
 }
@@ -186,7 +186,7 @@ out.result({
   unresolved: audit?.unresolved ?? [],
   stages: {
     locate_plays: statusOf(locate),
-    audit_rubric: statusOf(auditStep),
+    score_plays: statusOf(auditStep),
     render_report: statusOf(report),
   },
 });

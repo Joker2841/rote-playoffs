@@ -1,0 +1,27 @@
+{
+  "probe": "score",
+  "scorer_version": "1.1.0",
+  "target": "all",
+  "unresolved": [],
+  "total": 2,
+  "scored": 2,
+  "capped": 1,
+  "at_full": 1,
+  "signal_cost": {
+    "output_format": {"plays": 1, "lost": 0.25, "weight": 0.25, "fix": "Declare an output contract: an `output:` block with format and destination, either at the top level or nested under `metadata.contract:`. Both satisfy this signal."},
+    "frontmatter_completeness": {"plays": 1, "lost": 0.125, "weight": 0.25, "fix": "If the detail names tags or discoverability, the fix is a TOP-LEVEL `tags:` list. Tags under `metadata.discoverability.tags` do not count toward this signal, and that is the shape `rote workspace export` generates, so a play can carry nine tags and still be marked down. Keep the discoverability block as well; add the top-level one."}
+  },
+  "results": [
+    {"play": "report-builder", "path": "/home/example/.rote/flows/example-org/report-builder/main.ts",
+     "state": "scored", "score": 0.62, "decision": "warn", "scorer_version": "1.1.0",
+     "unsatisfied": [
+       {"signal": "output_format", "weight": 0.25, "score": 0.0, "lost": 0.25, "severity": "warning",
+        "detail": "No output contract declared (optional, needed for composition)",
+        "fix": "Declare an output contract: an `output:` block with format and destination, either at the top level or nested under `metadata.contract:`. Both satisfy this signal."},
+       {"signal": "frontmatter_completeness", "weight": 0.25, "score": 0.5, "lost": 0.125, "severity": "info",
+        "detail": "Required fields present; missing optional: tags, discoverability",
+        "fix": "If the detail names tags or discoverability, the fix is a TOP-LEVEL `tags:` list. Tags under `metadata.discoverability.tags` do not count toward this signal, and that is the shape `rote workspace export` generates, so a play can carry nine tags and still be marked down. Keep the discoverability block as well; add the top-level one."}]},
+    {"play": "tidy-branches", "path": "/home/example/.rote/flows/tidy-branches/main.ts",
+     "state": "scored", "score": 1.0, "decision": "pass", "scorer_version": "1.1.0", "unsatisfied": []}
+  ]
+}

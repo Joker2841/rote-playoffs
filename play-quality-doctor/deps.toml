@@ -1,9 +1,17 @@
 schema_version = 1
 
-# python3 only. The frontmatter parse prefers pyyaml when it is importable and
-# falls back to a structural scan written for this one generated format when it
-# is not, so pyyaml is deliberately not a requirement: a play that needs a pip
-# install on someone else's machine is a play they will not run.
+# rote itself, because the scores come from `rote play score` rather than from
+# any reimplementation of the rubric. If you can run a play you already have it;
+# it is declared so the dependency is visible rather than assumed.
+[[tools]]
+id = "rote"
+command = "rote"
+required = true
+
+[[tools.install]]
+manager = "sh"
+command = ["sh", "-c", "curl -fsSL https://getrote.dev/install | bash"]
+
 [[tools]]
 id = "python3"
 command = "python3"
