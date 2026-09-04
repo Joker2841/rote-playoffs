@@ -107,15 +107,54 @@ def main():
             record["matched_queries"].append(query)
             record["best_rank"] = max(record["best_rank"], item.get("rank") or 0.0)
 
-    print(json.dumps({
-        "probe": "search",
-        "idea": idea,
-        "content_words": words,
-        "queries_run": queries,
-        "queries_failed": failed,
-        "candidates": list(hits.values()),
-        "candidate_count": len(hits),
-    }, indent=2, sort_keys=True))
+    # rote truncates a process step's stdout at 65536 bytes, silently, mid-JSON.
+    # The full result for a broad idea runs to about 120 KB, so this trims to a
+    # budget instead: descriptions clipped, matched queries reduced to a count,
+    # and only the strongest candidates kept. Found by running a pulled copy
+    # rather than the working tree, which is the only way this shows up.
+    BUDGET = 48000
+    DESC = 220
+
+    ranked = sorted(hits.values(),
+                    key=lambda c: (-len(c["matched_queries"]), -c["best_rank"]))
+    trimmed, dropped = [], 0
+    for record in ranked:
+        trimmed.append({
+            "reference": record["reference"],
+            "name": record["name"],
+            "owner": record["owner"],
+            "owner_kind": record["owner_kind"],
+            "description": " ".join(record["description"].split())[:DESC],
+            "tags": record["tags"][:8],
+            "downloads": record["downloads"],
+            "quality": record["quality"],
+            "published_at": record["published_at"],
+            "matched_queries": record["matched_queries"][:3],
+            "matched_query_total": len(record["matched_queries"]),
+            "best_rank": record["best_rank"],
+        })
+
+    def payload(records, note):
+        return json.dumps({
+            "probe": "search",
+            "idea": idea,
+            "content_words": words[:12],
+            "queries_run": queries,
+            "queries_failed": failed,
+            "candidates": records,
+            "candidate_count": len(hits),
+            "candidates_reported": len(records),
+            "candidates_dropped": note,
+        }, sort_keys=True)
+
+    text = payload(trimmed, 0)
+    while len(text) > BUDGET and len(trimmed) > 5:
+        step = max(1, len(trimmed) // 10)
+        del trimmed[-step:]
+        dropped = len(hits) - len(trimmed)
+        text = payload(trimmed, dropped)
+
+    print(text)
     return 0
 
 

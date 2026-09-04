@@ -498,13 +498,27 @@ lexical match rather than nothing built. That limit is printed in the output
 every run, along with any query that failed, because a failed query is not an
 empty result.
 
-## A bug the fixtures caught
+## Two bugs, and how each was found
+
+The fixtures caught the first.
 
 The first version scored "nothing close found" against a Play named
 `dependency-sweep` for an idea about "unused dependencies", because `dependency`
 and `dependencies` do not match as strings. A false all-clear is the most
 damaging thing this tool can produce, so it now stems both sides before
 comparing. The stemmer is crude and over-collapses, which is the safe direction.
+
+Running the **pulled** copy caught the second, and nothing else would have.
+`rote` truncates a process step's stdout at exactly 65536 bytes, silently, mid
+JSON. A broad idea produced about 123 KB of search results, so the next step
+received half a document and failed. Every local test had passed because they
+handed the file over as an argument and bypassed the step pipeline entirely.
+Output is now trimmed to a 48 KB budget, dropped candidates are counted in the
+output rather than hidden, and a parse failure at or above the limit now says it
+was probably truncated instead of exiting silently.
+
+The lesson generalises: test the artifact a stranger receives, not the one in
+your working tree.
 
 ## Running it
 

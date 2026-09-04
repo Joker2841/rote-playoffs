@@ -61,7 +61,16 @@ def main():
     try:
         found = json.loads(payload)
     except ValueError as error:
-        print(json.dumps({"probe": "assess", "error": "unusable search output: %s" % error}))
+        # A truncated payload is the likely cause and it must not read as an
+        # empty registry: rote clips a process step's stdout at 65536 bytes
+        # without saying so, and half a JSON document fails exactly here.
+        size = len(payload)
+        hint = (" The input is %d bytes, at or over rote's 65536-byte stdout limit, "
+                "so it was probably truncated rather than malformed." % size
+                if size >= 65000 else "")
+        print(json.dumps({"probe": "assess",
+                          "error": "unusable search output: %s.%s" % (error, hint),
+                          "input_bytes": size}))
         return 1
     if found.get("error"):
         print(json.dumps({"probe": "assess", "error": found["error"]}))

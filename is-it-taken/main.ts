@@ -36,7 +36,7 @@
  *   - json
  *   description: text for the human verdict, json for a machine-readable one suitable for gating a build script.
  * metadata:
- *   version: 0.1.0
+ *   version: 0.1.1
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
