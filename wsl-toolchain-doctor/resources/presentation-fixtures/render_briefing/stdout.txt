@@ -1,4 +1,4 @@
-WSL TOOLCHAIN DOCTOR                                 2026-09-06 14:55 UTC
+WSL TOOLCHAIN DOCTOR                                 2026-09-06 15:04 UTC
 
   probes    ########################  3/3 ok
 
@@ -23,7 +23,6 @@ WHAT RESOLVES WRONG
 ALSO SEEN
   LOW    duplicate_path_entry  1 entry
          Duplicate PATH entry, usually an unguarded shell rc append.
-         /home/example/.local/bin
          /home/example/.local/bin
 
 WHY

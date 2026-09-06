@@ -272,19 +272,29 @@ that is the shape the workspace exporter generates, so a Play can carry nine
 tags and still lose the points. And `provenance_url` reads a top-level `source:`
 field, not `provenance.url`.
 
-The point is not that any particular Play scores badly. It is that `validate`
-reports Pass, zero errors and zero warnings, while capping you, and gives no way
-to find out why. Of the ten Plays installed when this was first run, six were
-capped and all six validated clean. That included `modiqo/hello` at 0.40, which
-is a useful illustration precisely because it is the reference Play everyone
-starts from: if the best-documented example in the registry can be silently
-capped, the problem is the silence, not the author.
+An earlier version of this section claimed `validate` reports a clean pass on
+capped Plays. An audit showed that is false, so here is what is actually true.
+`rote play validate` prints the score, and it reports the signals it rates as
+warnings, with suggestions. For `modiqo/hello` at 0.52 it names `output_format`
+and `provenance_url` itself.
+
+What it never mentions is `frontmatter_completeness`, because that signal is
+rated `info` rather than `warning`. So a Play can be marked down 0.125 with
+validate printing Pass and saying nothing at all about the reason. That was true
+of 5 of the 18 Plays installed when this was written, and it is the one signal
+this Play surfaces that nothing else does.
+
+The rest of what it adds is arithmetic rather than discovery: validate runs on
+one Play at a time, so it cannot tell you that `provenance_url` is costing you
+0.60 across six Plays, or which single edit clears the most.
 
 ## What it is not
 
-A model of the scorer, not the scorer. `rote play validate` stays authoritative;
-where the two disagree, this is what is wrong. It is also not a general Play
-linter, deliberately. It answers one question.
+It is not a model of the scorer. It shells out to `rote play score --format
+json` once per Play and reports what comes back, so the numbers cannot drift:
+run `rote play score` on any single Play and they will match, because they are
+the same numbers. It is also not a general Play linter, deliberately. It answers
+one question.
 
 ## Running it
 

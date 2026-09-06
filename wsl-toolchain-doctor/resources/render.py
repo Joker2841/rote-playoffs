@@ -256,12 +256,15 @@ def main():
             # name only the commands, which is exactly how a wrong finding here
             # stayed invisible.
             for finding in sorted(group, key=lambda f: f.get("command") or "")[:6]:
-                if finding.get("path"):
+                # Only when the subject line listed command names. For a
+                # path-level finding the subject already is the path, and
+                # printing it again just repeated the line.
+                if finding.get("command") and finding.get("path"):
                     lines.append("         %s%s"
                                  % ((finding.get("command") + ": ")
                                     if finding.get("command") else "",
                                     finding["path"]))
-            if len(group) > 6:
+            if len(group) > 6 and group[0].get("command"):
                 lines.append("         ... and %d more" % (len(group) - 6))
         lines.append("")
 
