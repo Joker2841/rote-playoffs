@@ -106,6 +106,27 @@ def measure(path, timeout=20):
     except (ValueError, IndexError):
         return {"state": "unreadable", "bytes": None,
                 "detail": reason or "du exited %d" % result.returncode}
+    # The plausibility check has to come before the partial branch, not after
+    # it: du over /proc exits non-zero AND prints 128 TiB, so it took the
+    # partial path and skipped the bound entirely, putting 128 TiB into the
+    # headline.
+    capacity = 0
+    for probe_path in (resolved, "/"):
+        try:
+            stat_info = os.statvfs(probe_path)
+            capacity = stat_info.f_blocks * stat_info.f_frsize
+        except OSError:
+            capacity = 0
+        # A pseudo-filesystem reports zero blocks, which is exactly the case
+        # this bound exists for, so fall back to the root filesystem rather
+        # than treating "no capacity known" as "no limit".
+        if capacity:
+            break
+    if capacity and measured > capacity:
+        return {"state": "implausible", "bytes": None,
+                "detail": ("du reported %d bytes, more than the %d-byte filesystem "
+                           "holding it, so it is not real disk usage"
+                           % (measured, capacity))}
     if partial:
         # du walked part of the tree and still printed a total. Reading /root
         # this way gives "0" with exit 1, and the apt caches give a real number
