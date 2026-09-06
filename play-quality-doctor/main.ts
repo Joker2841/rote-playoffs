@@ -4,7 +4,7 @@
  * ---
  * name: play-quality-doctor
  * source: https://github.com/Joker2841/rote-playoffs/tree/main/play-quality-doctor
- * description: 'Runs rote''s own quality scorer across every Play you have, ranks the signals by what they are costing you, and tells you what to type to clear each one. rote play score is authoritative for one Play; what it does not do is run over a whole shelf, total the damage, or say which edit fixes a finding whose required shape is not obvious from the wording. Of the ten Plays installed when this was written, six scored below 1.00 and every one was reported as a clean pass by rote play validate: zero errors, zero warnings, no mention that anything was unsatisfied. That gap is the reason this exists. Two findings are worth stating because their wording does not lead you to the fix. When frontmatter_completeness reports missing optional: tags, the required shape is a top-level tags list; tags under metadata.discoverability.tags do not count, and that is exactly the shape rote workspace export generates, so a Play can carry nine tags and still be marked down. And provenance_url reads a top-level source field rather than provenance.url. It computes nothing itself: run rote play score on any single Play and the numbers will match, because they are the same numbers. Read-only, no network, no credentials.'
+ * description: 'Runs rote''s own quality scorer across every Play you have, totals what each unsatisfied signal is costing you, and tells you what to type to clear it. rote play score is authoritative for one Play at a time; what it does not do is run over a whole shelf or rank the signals by total damage. This does that, and it computes nothing itself: run rote play score on any single Play and the numbers will match, because they are the same numbers. One signal is genuinely invisible without it. rote play validate reports only signals it rates as warnings, and frontmatter_completeness is rated info, so a Play can be marked down 0.125 for it while validate prints Pass and never mentions it. That was true of 5 of the 18 Plays installed when this was written. Two findings are also worth stating because their wording does not lead you to the fix: when frontmatter_completeness reports missing optional tags, the shape it wants is a top-level tags list, and tags under metadata.discoverability.tags do not count, which is exactly the shape rote workspace export generates. And provenance_url reads a top-level source field rather than provenance.url. Read-only, no network, no credentials.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
  *   url: https://github.com/Joker2841/rote-playoffs
@@ -49,9 +49,9 @@
  *   type: string
  *   required: false
  *   default: '1.0'
- *   description: Only list plays predicted below this score. Totals still cover every audited play, so filtering never hides how many were checked.
+ *   description: Only list plays below this score. Totals still cover every audited play, so filtering never hides how many were checked.
  * metadata:
- *   version: 0.3.3
+ *   version: 0.3.4
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
@@ -197,8 +197,7 @@ out.result({
   audited: total,
   capped,
   at_full_score: audit?.at_full ?? null,
-  signal_counts: audit?.signal_counts ?? {},
-  parser: audit?.parser ?? null,
+  signal_cost: audit?.signal_cost ?? {},
   unresolved: audit?.unresolved ?? [],
   stages: {
     locate_plays: statusOf(locate),

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render the portfolio view over rote's own quality scorer."""
 import json
+import os
 import sys
 import textwrap
 import time
@@ -27,6 +28,23 @@ def argument(index, default):
         return default
     raw = sys.argv[index].strip()
     return default if not raw or raw.startswith("$") else raw
+
+
+def qualified(row):
+    """owner/name, because a bare basename is ambiguous on a real shelf.
+
+    Five of the eighteen plays installed here share a directory name with a
+    play by a different owner, and the text report printed only that name, so
+    it gave you no way to tell which file to edit.
+    """
+    name = row.get("play", "?")
+    path = row.get("path") or ""
+    parts = [p for p in path.split(os.sep) if p]
+    if "flows" in parts:
+        tail = parts[parts.index("flows") + 1:]
+        if len(tail) >= 2 and tail[1] == name:
+            return "%s/%s" % (tail[0], name)
+    return name
 
 
 def main():
@@ -74,8 +92,14 @@ def main():
     lines = []
     lines.append("PLAY QUALITY DOCTOR" + " " * 34 + time.strftime("%Y-%m-%d %H:%M", time.gmtime()) + " UTC")
     lines.append("")
+    total_audited = data.get("total", len(results))
+    omitted = data.get("omitted") or 0
     lines.append("  scored    " + BAR * 24 + "  %d play(s), rubric %s"
-                 % (len(results), data.get("scorer_version") or "unknown"))
+                 % (total_audited, data.get("scorer_version") or "unknown"))
+    if omitted:
+        lines.append("            %d audited, %d listed below; the rest scored "
+                     "highest and were dropped to fit the output budget"
+                     % (total_audited, len(results)))
     lines.append("")
 
     if not results:
@@ -89,16 +113,17 @@ def main():
 
     capped = data.get("capped", 0)
     if capped == 0:
-        lines.append("VERDICT  All %d play(s) satisfy every rubric signal." % len(results))
+        lines.append("VERDICT  All %d play(s) satisfy every rubric signal." % total_audited)
     else:
-        lines.append("VERDICT  %d of %d play(s) are below 1.00." % (capped, len(results)))
-        lines.append("  rote play validate calls every one of these a clean pass.")
+        lines.append("VERDICT  %d of %d play(s) are below 1.00." % (capped, total_audited))
+        lines.append("  rote play validate reports only what it rates a warning,")
+        lines.append("  so a signal rated info is a silent deduction.")
     lines.append("")
 
     if cost:
         lines.append("WHAT IT IS COSTING YOU, ACROSS EVERY PLAY")
         for signal, entry in sorted(cost.items(), key=lambda kv: -kv[1]["lost"]):
-            lines.append("  -%.2f total  %-26s %d play(s)   weight %.2f"
+            lines.append("  -%.3f total  %-26s %d play(s)   weight %.2f"
                          % (entry["lost"], signal, entry["plays"], entry["weight"]))
         lines.append("")
 
@@ -106,15 +131,19 @@ def main():
     if not shown:
         lines.append("  every scored play is at or above the requested score")
     for result in shown:
-        lines.append("  %.2f  %s" % (result["score"], result["play"]))
+        lines.append("  %.2f  %s" % (result["score"], qualified(result)))
         for item in result["unsatisfied"]:
             lines.append("        -%.3f %-26s %s"
                          % (item["lost"], item["signal"], item["detail"]))
     lines.append("")
 
+    # Built from every scored play, not the filtered list. min_score decides
+    # which plays are listed; it must not decide whether you are told how to
+    # fix the damage the table above just reported. min_score=0 used to print
+    # 1.97 points lost and then offer no fix for any of it.
     fixes = {}
-    for result in shown:
-        for item in result["unsatisfied"]:
+    for result in results:
+        for item in result.get("unsatisfied", []):
             if item.get("fix"):
                 fixes[item["signal"]] = item["fix"]
     if fixes:
@@ -131,9 +160,11 @@ def main():
             lines.append("  %-30s %s  %s" % (problem.get("play", "?"), problem.get("state"),
                                              problem.get("detail", "")))
         lines.append("")
-    for note in data.get("unresolved", []):
+    notes = data.get("unresolved", []) or []
+    if notes:
         lines.append("NOT RESOLVED")
-        lines.append("  %s" % note)
+        for note in notes:
+            lines.append("  %s" % note)
         lines.append("")
 
     lines.append("WHERE THESE NUMBERS COME FROM")

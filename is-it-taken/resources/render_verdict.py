@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Present the verdict so it can be acted on in under a minute."""
 import json
+import re
 import sys
 import textwrap
 import time
@@ -26,7 +27,13 @@ def argument(index, default):
     if len(sys.argv) <= index:
         return default
     raw = sys.argv[index].strip()
-    return default if not raw or raw.startswith("$") else raw
+    # The guard exists because rote passes an unsubstituted "$name" through
+    # when a parameter is unset. Only that exact shape is a placeholder; an
+    # idea that merely starts with a dollar is real input and used to be
+    # thrown away and reported as "no idea given".
+    if not raw or re.fullmatch(r"\$[A-Za-z_][A-Za-z0-9_]*", raw):
+        return default
+    return raw
 
 
 def block(title, rows, lines):
@@ -66,6 +73,12 @@ def main():
             "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "idea": data.get("idea"),
             "verdict": data.get("verdict"),
+            "weak_idea_words": data.get("weak_idea_words", []),
+            "distinctive_idea_words": data.get("distinctive_idea_words", []),
+            "loosely_related": data.get("loosely_related", []),
+            "queries_failed": data.get("queries_failed", []),
+            "same_idea_total": data.get("same_idea_total"),
+            "adjacent_total": data.get("adjacent_total"),
             "headline": data.get("headline"),
             "same_idea": [c["reference"] for c in data.get("same_idea", [])],
             "adjacent": [c["reference"] for c in data.get("adjacent", [])],

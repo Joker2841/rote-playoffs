@@ -4,7 +4,7 @@
  * ---
  * name: is-it-taken
  * source: https://github.com/Joker2841/rote-playoffs/tree/main/is-it-taken
- * description: 'Answers the question worth asking before you write a line: has someone already published this. The public registry went from 242 plays to 411 in twenty-four hours, so nobody can hold it in their head, and rote play search answers one query at a time using the words you happened to choose. This fans your idea into a dozen queries drawn from its own content words, so a play that solves the same problem in different vocabulary still surfaces, then ranks what comes back by how close it actually is rather than by how popular it is. A play with forty downloads sharing one incidental word is not a collision; a play with three downloads whose name is your idea is. It returns one of four verdicts: already built, crowded, adjacent work exists, or nothing close found. That last one is deliberately not phrased as proof, because matching here is lexical and two people can describe the same idea in words that share nothing. A confident all clear from a word matcher would be the most damaging thing this could say, so the limit is printed every time, along with any query that failed, because a failed query is not an empty result. Read-only, and it reads nothing local.'
+ * description: 'Answers the question worth asking before you write a line: has someone already published this. The public registry went from 242 plays to 411 in twenty-four hours, so nobody can hold it in their head, and rote play search answers one query at a time using the words you happened to choose. This fans your idea into a dozen queries drawn from its own content words, so a play that solves the same problem in different vocabulary still surfaces, then ranks what comes back by how close it actually is rather than by how popular it is. A play with forty downloads sharing one incidental word is not a collision; a play with three downloads whose name is your idea is. It returns one of five verdicts: already built, crowded, adjacent work exists, nothing close found, or cannot tell. The last two are the careful ones. Nothing close found is deliberately not phrased as proof, because matching here is lexical and two people can describe the same idea in words that share nothing. Cannot tell is what you get when no search actually ran, which must never read like a clear run. A confident all clear from a word matcher would be the most damaging thing this could say, so the limit is printed every time, along with any query that failed, because a failed query is not an empty result. Read-only, and it reads nothing local.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
  *   url: https://github.com/Joker2841/rote-playoffs
@@ -42,7 +42,7 @@
  *   - json
  *   description: text for the human verdict, json for a machine-readable one suitable for gating a build script.
  * metadata:
- *   version: 0.1.3
+ *   version: 0.1.4
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic

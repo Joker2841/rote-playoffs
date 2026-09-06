@@ -1,16 +1,17 @@
-PLAY QUALITY DOCTOR                                  2026-09-04 11:22 UTC
+PLAY QUALITY DOCTOR                                  2026-09-06 14:51 UTC
 
   scored    ########################  2 play(s), rubric 1.1.0
 
 VERDICT  1 of 2 play(s) are below 1.00.
-  rote play validate calls every one of these a clean pass.
+  rote play validate reports only what it rates a warning,
+  so a signal rated info is a silent deduction.
 
 WHAT IT IS COSTING YOU, ACROSS EVERY PLAY
-  -0.25 total  output_format              1 play(s)   weight 0.25
-  -0.12 total  frontmatter_completeness   1 play(s)   weight 0.25
+  -0.250 total  output_format              1 play(s)   weight 0.25
+  -0.125 total  frontmatter_completeness   1 play(s)   weight 0.25
 
 PER PLAY
-  0.62  report-builder
+  0.62  example-org/report-builder
         -0.250 output_format              No output contract declared (optional, needed for composition)
         -0.125 frontmatter_completeness   Required fields present; missing optional: tags, discoverability
 

@@ -1,22 +1,26 @@
-WSL DISK RECLAIM                                     2026-09-03 16:25 UTC
+WSL DISK RECLAIM                                     2026-09-06 14:55 UTC
 
   probes    ########################  3/3 ok
 
-VERDICT  WSL is holding 120.00 GB of your Windows disk.
-  50.00 GB already freed inside and not returned to Windows
-  9.00 GB sitting in caches that can be cleared
+VERDICT  WSL is holding 120.00 GiB of your Windows disk.
+  50.00 GiB already freed inside and not returned to Windows
+  9.00 GiB sitting in caches that can be cleared
 
 ON THE WINDOWS SIDE
-   90.00 GB  distro   /mnt/c/Users/example/AppData/Local/wsl/{00000000-0000-0000-0000-000000000000}/ext4.vhdx
-   30.00 GB  docker   /mnt/c/Users/example/AppData/Local/Docker/wsl/disk/docker_data.vhdx
-   40.00 GB  inside   reported in use by the distro itself
+   90.00 GiB  distro   /mnt/c/Users/example/AppData/Local/wsl/{00000000-0000-0000-0000-000000000000}/ext4.vhdx
+   30.00 GiB  docker   /mnt/c/Users/example/AppData/Local/Docker/wsl/disk/docker_data.vhdx
+   40.00 GiB  inside   reported in use by the distro itself
 
 INSIDE THE DISTRO
-    6.00 GB  user cache
-    5.00 GB  pip cache  (counted inside user cache)
-    2.00 GB  systemd journal
-    1.00 GB  apt package cache
-     n/a  go module cache (not measured)
+    6.00 GiB  user cache
+    5.00 GiB  pip cache  (counted inside user cache)
+    2.00 GiB  systemd journal
+    1.00 GiB  apt package cache
+      n/a  go module cache (not measured)
+    9.00 GiB  counted once, not twice: the rows marked as nested are
+            already inside a row above them, so the column adds
+            up to more than the total. The total is what you can
+            actually free.
 
 HOW TO RECLAIM, IN THIS ORDER
   Freeing space inside does not shrink the Windows file. Compacting

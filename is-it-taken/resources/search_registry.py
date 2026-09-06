@@ -29,7 +29,13 @@ def argument(index, default=""):
     if len(sys.argv) <= index:
         return default
     raw = sys.argv[index].strip()
-    return default if not raw or raw.startswith("$") else raw
+    # The guard exists because rote passes an unsubstituted "$name" through
+    # when a parameter is unset. Only that exact shape is a placeholder; an
+    # idea that merely starts with a dollar is real input and used to be
+    # thrown away and reported as "no idea given".
+    if not raw or re.fullmatch(r"\$[A-Za-z_][A-Za-z0-9_]*", raw):
+        return default
+    return raw
 
 
 def content_words(text):
@@ -60,11 +66,15 @@ def queries_for(idea):
 
 
 def search(query, limit=10):
+    # 55 seconds, not 90: there are up to 14 queries and the step gets 900, so
+    # 90 each could reach 1260 and the step would be killed before it could
+    # print the list of failed queries it had been collecting. The graceful
+    # degradation has to fit inside the budget or it never runs.
     try:
         result = subprocess.run(
             ["rote", "play", "search", query, "--source", "registry",
              "--scope", "public", "--limit", str(limit), "--json"],
-            capture_output=True, text=True, timeout=90)
+            capture_output=True, text=True, timeout=55)
     except (OSError, subprocess.SubprocessError):
         return None
     try:

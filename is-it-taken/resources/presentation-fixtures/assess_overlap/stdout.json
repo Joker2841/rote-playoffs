@@ -1,11 +1,16 @@
 {
-  "adjacent": [],
-  "all_ranked": [
+  "adjacent": [
     {
       "best_rank": 2.4,
-      "closeness": "same idea",
+      "closeness": "adjacent",
+      "common_shared_words": [
+        "dependency"
+      ],
       "description": "Finds dependencies declared in a project that nothing imports, and imports that nothing declares. Reads the lockfile and the source, never installs.",
       "downloads": 18,
+      "evidence": 0.25,
+      "evidence_floor": 1.24,
+      "idea_cover": 0.1,
       "matched_queries": [
         "unused",
         "dependencies",
@@ -13,7 +18,7 @@
       ],
       "matched_query_count": 3,
       "name": "dependency-sweep",
-      "name_overlap": 0.5,
+      "name_overlap": 0.28,
       "owner": "example-org",
       "owner_kind": "org",
       "published_at": "2026-09-02T09:00:00Z",
@@ -22,7 +27,44 @@
       "shared_name_words": [
         "dependency"
       ],
-      "similarity": 0.486,
+      "similarity": 0.273,
+      "tags": [
+        "domain-engineering",
+        "job-dependency-audit",
+        "effect-read-only"
+      ]
+    }
+  ],
+  "adjacent_total": 1,
+  "all_ranked": [
+    {
+      "best_rank": 2.4,
+      "closeness": "adjacent",
+      "common_shared_words": [
+        "dependency"
+      ],
+      "description": "Finds dependencies declared in a project that nothing imports, and imports that nothing declares. Reads the lockfile and the source, never installs.",
+      "downloads": 18,
+      "evidence": 0.25,
+      "evidence_floor": 1.24,
+      "idea_cover": 0.1,
+      "matched_queries": [
+        "unused",
+        "dependencies",
+        "unused dependencies"
+      ],
+      "matched_query_count": 3,
+      "name": "dependency-sweep",
+      "name_overlap": 0.28,
+      "owner": "example-org",
+      "owner_kind": "org",
+      "published_at": "2026-09-02T09:00:00Z",
+      "quality": 1.0,
+      "reference": "example-org/dependency-sweep@0.3.1",
+      "shared_name_words": [
+        "dependency"
+      ],
+      "similarity": 0.273,
       "tags": [
         "domain-engineering",
         "job-dependency-audit",
@@ -32,8 +74,12 @@
     {
       "best_rank": 0.3,
       "closeness": "unrelated",
+      "common_shared_words": [],
       "description": "Lists every dependency licence in a project and flags copyleft obligations that reach your distributed artifact.",
       "downloads": 3,
+      "evidence": 0,
+      "evidence_floor": 1.24,
+      "idea_cover": 0.0,
       "matched_queries": [
         "dependencies project"
       ],
@@ -46,7 +92,7 @@
       "quality": 0.9,
       "reference": "someone/license-inventory@0.1.0",
       "shared_name_words": [],
-      "similarity": 0.129,
+      "similarity": 0.061,
       "tags": [
         "domain-engineering",
         "effect-read-only"
@@ -54,11 +100,16 @@
     }
   ],
   "candidate_count": 2,
-  "headline": "1 play(s) already do this. Read them before you write a line.",
+  "distinctive_idea_words": [
+    "unused"
+  ],
+  "headline": "1 play(s) are close enough to read first, then decide whether yours is a different question or the same one.",
   "idea": "a play that finds unused dependencies in a project",
   "loosely_related": [],
+  "loosely_related_total": 0,
   "probe": "assess",
   "queries_failed": [],
+  "queries_failed_count": 0,
   "queries_run": [
     "a play that finds unused dependencies in a project",
     "unused",
@@ -68,35 +119,8 @@
     "unused project",
     "dependencies project"
   ],
-  "same_idea": [
-    {
-      "best_rank": 2.4,
-      "closeness": "same idea",
-      "description": "Finds dependencies declared in a project that nothing imports, and imports that nothing declares. Reads the lockfile and the source, never installs.",
-      "downloads": 18,
-      "matched_queries": [
-        "unused",
-        "dependencies",
-        "unused dependencies"
-      ],
-      "matched_query_count": 3,
-      "name": "dependency-sweep",
-      "name_overlap": 0.5,
-      "owner": "example-org",
-      "owner_kind": "org",
-      "published_at": "2026-09-02T09:00:00Z",
-      "quality": 1.0,
-      "reference": "example-org/dependency-sweep@0.3.1",
-      "shared_name_words": [
-        "dependency"
-      ],
-      "similarity": 0.486,
-      "tags": [
-        "domain-engineering",
-        "job-dependency-audit",
-        "effect-read-only"
-      ]
-    }
-  ],
-  "verdict": "already built"
+  "same_idea": [],
+  "same_idea_total": 0,
+  "verdict": "adjacent work exists",
+  "weak_idea_words": []
 }

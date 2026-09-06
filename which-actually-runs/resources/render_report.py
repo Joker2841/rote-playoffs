@@ -20,6 +20,8 @@ EXPLAIN = {
     "windows_exe_only": "command not found, but installed on Windows",
     "shadowed": "more than one copy on PATH",
     "duplicate_path_entry": "duplicate PATH entry",
+    "script_on_windows_fs": "on the Windows drive, but runs as a Linux process",
+    "integration_mount": "resolves only while its integration is running",
     "stale_manager_entry": "on PATH, but the directory is gone",
 }
 
@@ -95,8 +97,21 @@ def main():
     lines.append("")
 
     high = sum(1 for f in findings if f.get("severity") == "high")
-    if not actionable:
-        lines.append("VERDICT  Every watched command resolves to a single, working copy.")
+    quiet_count = sum(1 for f in findings if f.get("severity") == "low")
+    if not actionable and quiet_count:
+        lines.append("VERDICT  Nothing is broken, but %d command(s) resolve past "
+                     "another copy." % quiet_count)
+    elif not actionable:
+        absent = shadow.get("absent_count") or 0
+        watched = shadow.get("watched_count") or 0
+        if watched and absent >= watched:
+            lines.append("VERDICT  None of the %d watched commands are on this PATH, "
+                         "so there is nothing to compare." % watched)
+        elif absent:
+            lines.append("VERDICT  Every command that resolves resolves cleanly, but "
+                         "%d of %d are not on this PATH at all." % (absent, watched))
+        else:
+            lines.append("VERDICT  Every watched command resolves to a single, working copy.")
     elif high:
         lines.append("VERDICT  %d command(s) resolve to something that is not there or not native." % high)
     else:
@@ -119,7 +134,9 @@ def main():
                                           EXPLAIN.get(finding["kind"], finding["kind"])))
         lines.append("         %s" % finding.get("path", ""))
         if finding.get("target"):
-            lines.append("         target missing: %s" % finding["target"])
+            label = ("resolves to" if finding.get("kind") == "integration_mount"
+                     else "target missing")
+            lines.append("         %s: %s" % (label, finding["target"]))
         for extra in (finding.get("examples") or [])[1:]:
             lines.append("         %s" % extra)
         if finding.get("entry_count", 0) > 3:
@@ -140,7 +157,8 @@ def main():
         other = [f for f in quiet if f.get("kind") != "shadowed"]
         lines.append("ALSO RESOLVED, NOTHING WRONG")
         for finding in resolved[:40]:
-            beaten = len(finding.get("shadowed") or [])
+            beaten = finding.get("other_copies",
+                                 len(finding.get("shadowed") or []))
             lines.append("  %-10s %s wins, over %d other cop%s on PATH"
                          % (finding.get("command") or "-",
                             finding.get("origin") or "the first",
@@ -150,7 +168,8 @@ def main():
             lines.append("  ... and %d more, all resolving to a single working copy"
                          % (len(resolved) - 40))
         for finding in other:
-            lines.append("  %s" % finding.get("kind", ""))
+            lines.append("  %s" % EXPLAIN.get(finding.get("kind", ""),
+                                              finding.get("kind", "")))
             lines.append("         %s"
                          % " ".join((finding.get("detail") or "").split()))
             if finding.get("path"):
@@ -162,6 +181,9 @@ def main():
         lines.append("WHERE YOUR PATH COMES FROM")
         for item in path_lines[:12]:
             lines.append("  %s:%-4s %s" % (item["file"], item["line"], item["text"]))
+        if len(path_lines) > 12:
+            lines.append("  ... and %d more line(s) that put a directory on PATH"
+                         % (len(path_lines) - 12))
         lines.append("")
 
     config_findings = config.get("findings", [])
@@ -173,6 +195,15 @@ def main():
                 lines.append("         " + wrapped)
             for place in (finding.get("places") or [])[:4]:
                 lines.append("         at %s" % place)
+        lines.append("")
+
+    detail = shadow.get("detail_level")
+    if detail and detail != "full":
+        lines.append("WHAT WAS LEFT OUT")
+        for wrapped in textwrap.wrap(
+                "The command probe produced more than it could hand on, so it "
+                "reduced what it reported: %s." % detail, width=70):
+            lines.append("  " + wrapped)
         lines.append("")
 
     lines.append("SCOPE")

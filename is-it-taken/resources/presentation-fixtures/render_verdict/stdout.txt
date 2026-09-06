@@ -1,18 +1,19 @@
-IS IT TAKEN                                          2026-09-04 14:58 UTC
+IS IT TAKEN                                          2026-09-06 14:55 UTC
 
   searched  ########################  7 queries, 2 candidate(s) examined
 
   idea      a play that finds unused dependencies in a project
 
-VERDICT  ALREADY BUILT
-  1 play(s) already do this. Read them before you write a line.
+VERDICT  ADJACENT WORK EXISTS
+  1 play(s) are close enough to read first, then decide whether yours is a
+  different question or the same one.
 
-ALREADY DOES THIS
-  0.49  example-org/dependency-sweep@0.3.1              18 dl  q=1.00
+CLOSE ENOUGH TO READ FIRST
+  0.27  example-org/dependency-sweep@0.3.1              18 dl  q=1.00
         Finds dependencies declared in a project that nothing imports, and
         imports that nothing declares. Reads the lockfile and the source,
         never installs.
-        shares in the name: dependency
+        shares in the name: dependency (common here)
 
 WHAT THIS CANNOT TELL YOU
   Matching is lexical. Two people can describe the same idea in words that

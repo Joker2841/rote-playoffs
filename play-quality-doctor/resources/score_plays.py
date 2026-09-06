@@ -154,29 +154,21 @@ def main():
             "results": rows,
         }, indent=2, sort_keys=True)
 
-    ordered = sorted(results, key=lambda r: r.get("score", 1.0))
+    # A play that could not be scored is the most important row in the report,
+    # so it is never the one that gets trimmed. It used to be exactly that:
+    # rows with no score key sorted to the end and the budget loop cut from the
+    # end. Unscorable rows are pinned to the front, and the ones dropped are
+    # the highest scoring, which are the ones with least to say.
+    unscorable = [r for r in results if "score" not in r]
+    scorable = sorted((r for r in results if "score" in r),
+                      key=lambda r: r.get("score", 1.0))
+    ordered = unscorable + scorable
     text = emit(ordered, 0)
-    while len(text) > BUDGET and len(ordered) > 5:
-        step = max(1, len(ordered) // 10)
+    while len(text) > BUDGET and len(ordered) > max(5, len(unscorable)):
+        step = max(1, (len(ordered) - len(unscorable)) // 10)
         ordered = ordered[:-step]
         text = emit(ordered, len(results) - len(ordered))
     print(text)
-    return 0
-
-
-def _unused_original(results, scored, capped, cost, versions, located):
-    print(json.dumps({
-        "probe": "score",
-        "scorer_version": versions[0] if len(versions) == 1 else (versions or None),
-        "target": located.get("target"),
-        "unresolved": located.get("unresolved", []),
-        "total": len(results),
-        "scored": len(scored),
-        "capped": len(capped),
-        "at_full": len(scored) - len(capped),
-        "signal_cost": cost,
-        "results": sorted(results, key=lambda r: r.get("score", 1.0)),
-    }, indent=2, sort_keys=True))
     return 0
 
 

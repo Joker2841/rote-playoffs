@@ -11,10 +11,37 @@ on a machine slightly larger than mine.
 
 Output budgets and their measured breaking points are documented per Play below.
 
-They were also read cold, as a stranger would, which caught a different class of
-problem: two of them counted findings in the header that the default output
-never listed, and one answered a question confidently and wrongly. Each is
-written up under the Play it belongs to.
+They were also read cold, as a stranger would, and then audited a second time by
+five independent reviewers who did not write them and were told to try to break
+them. That second pass found more than the first, and the worst of it was a
+class I had not looked for: claims that were confidently false rather than
+merely missing.
+
+The headline ones, each written up under the Play it belongs to:
+
+- `which-actually-runs` printed secrets. Redaction was a denylist of five
+  words, so `SSH_PRIVATE_KEY`, `OPENAI_KEY`, `NPM_AUTH`, `STRIPE_SK` and
+  `DATABASE_URL` all reached the report. It is an allowlist now.
+- Both PATH plays counted `/bin/git` and `/usr/bin/git` as two copies of git.
+  `/bin` is a symlink to `usr/bin`, so eight of thirteen findings on this
+  machine were one file counted twice, and a duplicated PATH entry made a
+  command shadow itself.
+- Both called `code`, `tsc` and `yarn` Windows programs. They are POSIX shell
+  scripts that happen to live on the Windows drive and run as ordinary Linux
+  processes. Living under `/mnt` is not the test; the two-byte `MZ` header is.
+- `play-quality-doctor` said `rote play validate` calls capped plays a clean
+  pass. It does not: it reports them as warnings and names two of the three
+  signals itself. The real gap is one signal, `frontmatter_completeness`, which
+  validate rates `info` and therefore never mentions.
+- `is-it-taken` called a play about files an agent touched a collision with an
+  idea about watching web pages, because both names contained "since" and
+  "last". Its stemmer also turned `files` into `fil` and `notes` into `not`.
+- Given a PATH where nothing resolved, both PATH plays reported that every
+  watched command resolved correctly.
+
+Every one of those is a false statement about the user's machine, which is the
+worst thing any of these can produce, and none of them would have shown up in a
+run that went well.
 
 Five Plays for the Rote Playoffs. Two are WSL-specific, three run anywhere. All
 five are read-only and need nothing but python3 and coreutils. No credentials,
@@ -441,15 +468,31 @@ and writes nothing.
 step whose output scales with the host can cross that line on someone else's
 machine while passing on yours. Measured breaking points before the fix:
 
-    is-it-taken         search results       123 KB on a broad idea
-    which-actually-runs PATH entries x cmds   77 KB at 40 PATH entries
+    is-it-taken          search results      123 KB on a broad idea
+    which-actually-runs  PATH entries x cmds  77 KB at 40 PATH entries
     wsl-toolchain-doctor same                 44 KB at 40 PATH entries
-    play-quality-doctor  installed plays      would cross at ~98 plays
+    play-quality-doctor  installed plays      crosses 48 KB at 73 plays,
+                                              and 64 KB at about 101
+    which-actually-runs  shell startup files 122 KB from a 45 KB .bashrc
+    wsl-disk-reclaim     extra_paths          69 KB at 200 paths
+    both PATH plays      missing PATH entries 99 KB at 700 dead directories
 
-All four now trim to a 48 KB budget, degrading in a stated order rather than
-being cut mid-structure, and every reduction is named in the payload: hits
-trimmed to the winner, then only commands with findings, then duplicate entries
-counted rather than listed. After the fix, an 800-entry PATH produces 5 KB.
+The last three were found by the second audit and were still live. Every step
+now trims to a 48 KB budget, degrading in a stated order rather than being cut
+mid-structure, and the reduction is named in the report rather than only in the
+payload: there is a WHAT WAS LEFT OUT section, because a trim nobody is told
+about is how a truncated probe became a clean bill of health.
+
+Measured after the fix: 700 dead PATH directories give 10 KB, a 45 KB .bashrc
+gives 8 KB, 200 extra paths give 23 KB.
+
+Two of these were worse than truncation. When the PATH probe overflowed, the
+consuming step could not parse it, and the report then said "every watched
+command resolves to a Linux copy" and exited 0. That is an affirmative claim
+about a machine that was never examined. And `play-quality-doctor` trimmed the
+plays it could not score first, because rows with no score sorted last and the
+budget cut from the end, so the plays most worth knowing about were the ones
+dropped.
 
 A report that quietly stopped listing things is worse than one that says it ran
 out of room.

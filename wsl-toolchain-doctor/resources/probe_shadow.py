@@ -42,6 +42,24 @@ def classify(directory):
     return "linux"
 
 
+def is_pe_binary(path):
+    """True when the kernel would hand this file to Windows.
+
+    Living on /mnt/c is not enough, and treating it as enough produced three
+    false findings on the machine this was written on: code, tsc and yarn are
+    POSIX sh scripts that happen to sit on the Windows filesystem, and they run
+    as ordinary Linux processes. WSL routes a file to Windows through binfmt,
+    and /proc/sys/fs/binfmt_misc/WSLInterop matches on the two bytes MZ, which
+    is the PE header every Windows executable starts with. So that is what is
+    checked.
+    """
+    try:
+        with open(path, "rb") as handle:
+            return handle.read(2) == b"MZ"
+    except OSError:
+        return False
+
+
 def runnable(path):
     """True only if the shell could actually execute this exact path.
 
@@ -52,6 +70,28 @@ def runnable(path):
     except OSError:
         return False
     return stat.S_ISREG(info.st_mode) and os.access(path, os.X_OK)
+
+
+def distinct_files(paths):
+    """Collapse paths that are the same file to one entry.
+
+    /bin is a symlink to usr/bin on Ubuntu, so a plain string list reported
+    /usr/bin/git and /bin/git as two copies of git. A repeated PATH entry did
+    the same thing and made a command shadow itself. Identity is the inode
+    where it can be read, and the resolved path otherwise.
+    """
+    seen, unique = set(), []
+    for path in paths:
+        try:
+            info = os.stat(path)
+            key = (info.st_dev, info.st_ino)
+        except OSError:
+            key = os.path.realpath(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
 
 
 def dangling(path):
@@ -119,6 +159,9 @@ def argument(index):
     return "" if raw.startswith("$") else raw
 
 
+COMMAND_LIMIT = 120
+
+
 def extra_commands():
     raw = argument(1)
     return [name.strip() for name in raw.split(",") if name.strip()] if raw else []
@@ -142,19 +185,27 @@ def main():
     findings = []
 
     watchlist = WATCHLIST + [c for c in extra_commands() if c not in WATCHLIST]
+    # Each extra command costs a stat against every PATH entry, which on WSL
+    # means crossing the 9p boundary once per Windows directory. Past this many
+    # the step outruns its own timeout and the whole play fails instead of
+    # answering, so the list is capped and the cap is reported.
+    dropped_commands = max(0, len(watchlist) - COMMAND_LIMIT)
+    watchlist = watchlist[:COMMAND_LIMIT]
     for command in watchlist:
         bare, windows_ext, broken = scan(command, entries)
         winner = bare[0] if bare else None
-        linux_copies = [hit["path"] for hit in bare if hit["kind"] == "linux"]
+        linux_copies = distinct_files(h["path"] for h in bare if h["kind"] == "linux")
 
         if winner is None and windows_ext:
             verdict = "windows_exe_only"
         elif winner is None:
             verdict = "absent"
         elif winner["kind"] == "windows" and linux_copies:
-            verdict = "windows_shadows_linux"
+            verdict = ("windows_shadows_linux" if is_pe_binary(winner["path"])
+                       else "script_on_windows_fs_shadows_linux")
         elif winner["kind"] == "windows":
-            verdict = "windows_only"
+            verdict = ("windows_only" if is_pe_binary(winner["path"])
+                       else "script_on_windows_fs")
         elif len(linux_copies) > 1:
             verdict = "linux_multiple"
         else:
@@ -196,6 +247,29 @@ def main():
                 "command": command,
                 "kind": "windows_only",
                 "detail": "Resolves to a Windows program. It runs, with Windows path semantics.",
+                "path": winner["path"],
+            })
+        elif verdict == "script_on_windows_fs_shadows_linux":
+            findings.append({
+                "severity": "medium",
+                "command": command,
+                "kind": "script_on_windows_fs_shadows_linux",
+                "detail": ("A script stored on the Windows filesystem wins over an "
+                           "installed Linux copy on PATH. It runs as a Linux process, "
+                           "so path semantics are normal, but it is not the copy you "
+                           "installed and it is read over the slow 9p mount."),
+                "path": winner["path"],
+                "shadowed": linux_copies,
+            })
+        elif verdict == "script_on_windows_fs":
+            findings.append({
+                "severity": "low",
+                "command": command,
+                "kind": "script_on_windows_fs",
+                "detail": ("Lives on the Windows filesystem but is a script with a Linux "
+                           "interpreter, so it runs as a Linux process rather than a "
+                           "Windows program. Normal path semantics, read over the slow "
+                           "9p mount."),
                 "path": winner["path"],
             })
         elif verdict == "windows_exe_only":
@@ -246,9 +320,18 @@ def main():
         "probe": "shadow",
         "path_source": "supplied" if path_override() else "inherited",
         "path_entry_count": len(entries),
+        "absent_count": sum(1 for c in commands if c.get("verdict") == "absent"),
+        "watched_count": len(commands),
+        "commands_dropped": dropped_commands,
         "windows_entry_count": sum(1 for e in entries if e["kind"] == "windows"),
         "duplicate_entry_count": sum(1 for e in entries if e["duplicate_of"] is not None),
-        "missing_entries": [e["path"] for e in entries if not e["exists"]],
+        # Capped, because this list is the one thing the budget below cannot
+        # trim and a PATH of 700 long dead directories pushed the payload past
+        # rote's 65536-byte cut. The consuming step then failed to parse and
+        # the report said every command resolved correctly, which is an
+        # affirmative claim about a machine that was never examined.
+        "missing_entries": [e["path"] for e in entries if not e["exists"]][:40],
+        "missing_entry_count": sum(1 for e in entries if not e["exists"]),
         "commands": commands,
             "detail_level": detail,
         "findings": findings,

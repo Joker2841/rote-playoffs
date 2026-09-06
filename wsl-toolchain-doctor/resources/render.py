@@ -27,6 +27,10 @@ EXPLAIN = {
         "Windows copy beats your Linux copy",
     "windows_only":
         "runs as a Windows program",
+    "script_on_windows_fs_shadows_linux":
+        "a script on the Windows drive beats your Linux copy",
+    "script_on_windows_fs":
+        "on the Windows drive, but runs as a Linux process",
     "windows_exe_only":
         "command not found, but installed on Windows",
     "linux_multiple":
@@ -112,7 +116,7 @@ def main():
                 data["findings"] = above_floor(data["findings"])
 
     if output_format == "json":
-        counts = {}
+        counts = {level: 0 for level in SEVERITY_FLOOR}
         for finding in all_findings:
             severity = finding.get("severity", "info")
             counts[severity] = counts.get(severity, 0) + 1
@@ -127,6 +131,14 @@ def main():
             "windows_entry_count": shadow.get("windows_entry_count"),
             "severity_counts": counts,
             "min_severity": floor,
+            "kernel_release": platform.get("kernel_release"),
+            "wsl_distro_name": platform.get("wsl_distro_name"),
+            "duplicate_entry_count": shadow.get("duplicate_entry_count"),
+            "missing_entries": shadow.get("missing_entries", []),
+            "missing_entry_count": shadow.get("missing_entry_count"),
+            "home_on_windows": traps.get("home_on_windows"),
+            "cwd_on_windows": traps.get("cwd_on_windows"),
+            "detail_level": shadow.get("detail_level"),
             "findings": above_floor(all_findings) if floor != "info" else all_findings,
             "probes_ok": ok,
         }, indent=2, sort_keys=True))
@@ -147,10 +159,21 @@ def main():
         return 0
 
     findings = list(shadow.get("findings", [])) + list(traps.get("findings", []))
-    actionable = [f for f in findings if f.get("severity") in ("high", "medium")]
+    # The verdict describes the machine, so it is computed from every finding,
+    # never the filtered view. Asking for high only used to print "Clear.
+    # Nothing is shadowed or dangling." directly above "9 medium, 11 low".
+    actionable = [f for f in all_findings if f.get("severity") in ("high", "medium")]
     level = worst(actionable) if actionable else "clean"
 
-    lines.append(f"VERDICT  {VERDICT_TEXT[level]}")
+    # The medium and high verdicts talk about commands, so they must not be
+    # used when every finding came from the configuration probe instead.
+    command_findings = [f for f in all_findings
+                        if f.get("command") and f.get("severity") in ("high", "medium")]
+    if level in ("high", "medium") and not command_findings:
+        lines.append("VERDICT  No command resolves wrong, but the way this machine "
+                     "is configured will bite you.")
+    else:
+        lines.append(f"VERDICT  {VERDICT_TEXT[level]}")
     # Counts come from every finding, not the filtered set, so raising the
     # floor never makes an unchecked machine look clean. What the floor hid
     # is said out loud rather than silently subtracted.
@@ -180,7 +203,22 @@ def main():
     )
     lines.append("WHAT RESOLVES WRONG")
     if not ranked:
-        lines.append("  nothing: every watched command resolves to a Linux copy")
+        # "Nothing wrong" and "nothing resolved at all" are opposite answers
+        # and this line used to give the first for both. A PATH of directories
+        # that do not exist produced "every watched command resolves to a
+        # Linux copy" when none of them resolved.
+        absent = shadow.get("absent_count") or 0
+        watched = shadow.get("watched_count") or 0
+        if watched and absent >= watched:
+            lines.append("  nothing resolves at all: none of the %d watched commands"
+                         % watched)
+            lines.append("  were found on this PATH, so there is nothing to compare")
+        elif absent:
+            lines.append("  nothing shadowed, but %d of %d watched commands are not on"
+                         % (absent, watched))
+            lines.append("  this PATH at all")
+        else:
+            lines.append("  nothing: every watched command resolves to a Linux copy")
     for finding in ranked:
         label = EXPLAIN.get(finding.get("kind"), finding.get("kind", ""))
         lines.append(f"  {finding.get('severity','').upper():6} {(finding.get('command') or '-'):10} {label}")
@@ -206,13 +244,25 @@ def main():
             subjects = [f.get("command") or f.get("path") or "" for f in group]
             subjects = [s for s in subjects if s]
             noun = "command" if group[0].get("command") else "entry"
-            lines.append(f"  LOW    {kind}  {len(group)} {noun}"
-                         + ("s" if len(group) != 1 else ""))
+            plural = noun if len(group) == 1 else (
+                "entries" if noun == "entry" else noun + "s")
+            lines.append(f"  LOW    {kind}  {len(group)} {plural}")
             detail = " ".join(str(group[0].get("detail", "")).split())
             for wrapped in textwrap.wrap(detail, width=78):
                 lines.append("         " + wrapped)
             for wrapped in textwrap.wrap(", ".join(sorted(subjects)), width=78):
                 lines.append("         " + wrapped)
+            # Every other section names a path you can check. This one used to
+            # name only the commands, which is exactly how a wrong finding here
+            # stayed invisible.
+            for finding in sorted(group, key=lambda f: f.get("command") or "")[:6]:
+                if finding.get("path"):
+                    lines.append("         %s%s"
+                                 % ((finding.get("command") + ": ")
+                                    if finding.get("command") else "",
+                                    finding["path"]))
+            if len(group) > 6:
+                lines.append("         ... and %d more" % (len(group) - 6))
         lines.append("")
 
     lines.append("WHY")
@@ -232,17 +282,36 @@ def main():
     lines.append(f"  {shadow.get('path_entry_count', '?')} entries"
                  f"   {shadow.get('windows_entry_count', '?')} windows"
                  f"   {shadow.get('duplicate_entry_count', '?')} duplicate")
-    for missing in shadow.get("missing_entries", []):
+    shown_missing = shadow.get("missing_entries", [])
+    for missing in shown_missing:
         lines.append(f"  missing   {missing}")
+    total_missing = shadow.get("missing_entry_count", len(shown_missing))
+    if total_missing > len(shown_missing):
+        lines.append(f"  missing   ... and {total_missing - len(shown_missing)} more")
     lines.append("")
+
+    # Any reduction is said out loud. A report that quietly stopped listing
+    # things is worse than one that says it ran out of room.
+    detail = shadow.get("detail_level")
+    if detail and detail != "full":
+        lines.append("WHAT WAS LEFT OUT")
+        for wrapped in textwrap.wrap(
+                "The command probe produced more than it could hand on, so it "
+                "reduced what it reported: %s. Counts above still cover "
+                "everything that was checked." % detail, width=74):
+            lines.append("  " + wrapped)
+        lines.append("")
 
     lines.append("SCOPE")
     source = shadow.get("path_source", "inherited")
     if source == "supplied":
-        lines.append("  Inspected a PATH supplied by the caller, not this shell's own.")
-    lines.append("  Reports the PATH of the shell that invoked it. A different shell,")
-    lines.append("  or a tool that edits PATH before running this, will see different")
-    lines.append("  results. Read-only: no file is written and no command is repaired.")
+        lines.append("  Inspected a PATH supplied by the caller, not this shell's own,")
+        lines.append("  so these results describe that environment rather than this one.")
+    else:
+        lines.append("  Reports the PATH of the shell that invoked it. A different shell,")
+        lines.append("  or a tool that edits PATH before running this, will see different")
+        lines.append("  results.")
+    lines.append("  Read-only: no file is written and no command is repaired.")
     lines.append("")
 
     lines.append("STAGES")

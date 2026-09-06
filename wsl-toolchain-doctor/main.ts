@@ -3,7 +3,7 @@
  * @rote-frontmatter
  * ---
  * name: wsl-toolchain-doctor
- * version: 0.2.0
+ * version: 0.2.5
  * description: 'Answers one question on a WSL machine: which of the commands you type are not the program you think they are. Windows directories are appended to the Linux PATH by default, so three unrelated failures look identical in a terminal and only one of them is shadowing. A command can resolve to a Windows shim and run with Windows path semantics, which is why docker with a bind mount hands a Windows client a Linux path it cannot see. It can fail to resolve at all while its .exe sits on PATH, so the shell reports command not found about a tool that is plainly installed. Or it can be a symlink into /mnt/wsl left by a Docker Desktop style integration, which resolves only while that is running. Telling those three apart is the point, because the fix for each is different. It names the winning path and what it beat, then the setting behind it: appendWindowsPath, mounts without the metadata option so chmod silently does nothing, case-insensitive mounts, and whether your files sit on the slow 9p filesystem. Read-only, needs only python3, repairs nothing. Off WSL it returns one applicability verdict instead of inventing findings.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
@@ -60,7 +60,7 @@
  * - engineering-workflows
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.2.4
+ *   version: 0.2.5
  *   status: released
  *   kind: atomic
  *   flow_type: parallel

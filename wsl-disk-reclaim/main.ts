@@ -3,7 +3,7 @@
  * @rote-frontmatter
  * ---
  * name: wsl-disk-reclaim
- * version: 0.1.0
+ * version: 0.1.4
  * description: 'Answers one question on a WSL machine: why is the Windows drive full when the distro says it is not. A WSL2 distro lives in a virtual disk that grows on demand and never shrinks on its own, so deleting forty gigabytes inside leaves the file Windows sees exactly as large as it ever got. df, run inside, reports only the inside view, so the missing space is invisible from the one place people look. This reports both numbers and the gap, per image rather than in aggregate. That distinction is the point: Docker Desktop keeps a separate disk whose interior is not visible from inside the distro, so folding it into one total would invent tens of gigabytes of free space that are not free. It then measures the caches worth clearing, marks the ones that nest so a parent and its child are never counted twice, and lists a measurement that did not finish as not measured rather than as zero. The output ends in commands in the order that actually works, because compacting before freeing reclaims almost nothing, which is why people try it once and conclude the whole exercise is a myth. Read-only: it stats files and runs du, and every suggested command is printed for a person to run, never executed.'
  * provenance:
  *   author: sai0000 <jokerbj2841@gmail.com>
@@ -23,7 +23,7 @@
  *   type: string
  *   required: false
  *   default: '512'
- *   description: Smallest directory worth reporting, in megabytes. Everything is still measured; this only controls what is listed.
+ *   description: Smallest directory that earns a suggested command, in megabytes. Everything measured is still listed in the table; this only controls which entries get a remedy.
  * - name: extra_paths
  *   type: string
  *   required: false
@@ -49,7 +49,7 @@
  * - local-only
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.1.3
+ *   version: 0.1.4
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
@@ -199,9 +199,9 @@ const gib = (value: unknown) =>
 const applicable = platformData?.applicable === true;
 out.summary(
   applicable
-    ? `${gib(imagesData?.windows_total_bytes) ?? "?"} GB held on Windows, ` +
-      `${gib(imagesData?.distro_reclaimable_bytes) ?? 0} GB not returned, ` +
-      `${gib(consumersData?.measured_total_bytes) ?? 0} GB in clearable caches`
+    ? `${gib(imagesData?.windows_total_bytes) ?? "?"} GiB held on Windows, ` +
+      `${gib(imagesData?.distro_reclaimable_bytes) ?? "?"} GiB not returned, ` +
+      `${gib(consumersData?.measured_total_bytes) ?? "?"} GiB in clearable caches`
     : "Not WSL: no virtual disk to reclaim",
 );
 

@@ -1,4 +1,4 @@
-WSL TOOLCHAIN DOCTOR                                 2026-09-03 15:48 UTC
+WSL TOOLCHAIN DOCTOR                                 2026-09-06 14:55 UTC
 
   probes    ########################  3/3 ok
 
@@ -19,6 +19,12 @@ WHAT RESOLVES WRONG
          /mnt/c/Program Files/Docker/Docker/resources/bin/docker
   MEDIUM psql       command not found, but installed on Windows
          /mnt/c/Program Files/PostgreSQL/16/bin/psql.exe
+
+ALSO SEEN
+  LOW    duplicate_path_entry  1 entry
+         Duplicate PATH entry, usually an unguarded shell rc append.
+         /home/example/.local/bin
+         /home/example/.local/bin
 
 WHY
   MEDIUM mount_without_metadata  /mnt/c
@@ -41,7 +47,8 @@ PATH SHAPE
 SCOPE
   Reports the PATH of the shell that invoked it. A different shell,
   or a tool that edits PATH before running this, will see different
-  results. Read-only: no file is written and no command is repaired.
+  results.
+  Read-only: no file is written and no command is repaired.
 
 STAGES
   ########  platform   ok

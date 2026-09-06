@@ -125,6 +125,9 @@ def path_entries():
     return entries, bool(override)
 
 
+COMMAND_LIMIT = 120
+
+
 def extra_commands():
     if len(sys.argv) < 2:
         return []
@@ -134,12 +137,54 @@ def extra_commands():
     return [n.strip() for n in raw.split(",") if n.strip()]
 
 
+def is_pe_binary(path):
+    """True when the kernel would hand this file to Windows.
+
+    Sitting on /mnt/c is not enough. code, tsc and yarn on the machine this was
+    written on are POSIX sh scripts that happen to live on the Windows drive,
+    and they run as ordinary Linux processes. WSL routes a file to Windows
+    through binfmt, and /proc/sys/fs/binfmt_misc/WSLInterop matches the two
+    bytes MZ, the header every Windows executable starts with.
+    """
+    try:
+        with open(path, "rb") as handle:
+            return handle.read(2) == b"MZ"
+    except OSError:
+        return False
+
+
+def distinct_files(hits):
+    """One entry per real file, keeping the first (winning) spelling.
+
+    Identity is the inode where it can be read, and the resolved path
+    otherwise, so a symlinked directory on PATH does not manufacture a copy.
+    """
+    seen, unique = set(), []
+    for hit in hits:
+        try:
+            info = os.stat(hit["path"])
+            key = (info.st_dev, info.st_ino)
+        except OSError:
+            key = os.path.realpath(hit["path"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(hit)
+    return unique
+
+
 def scan(command, entries):
     bare, win_ext, broken = [], [], []
     for entry in entries:
         if not entry["exists"]:
             continue
         exact = os.path.join(entry["path"], command)
+        if os.sep in command:
+            # os.path.join drops the directory when the second argument is
+            # absolute, so "/bin/ls" was looked up once per PATH entry and
+            # reported as several copies of itself, each labelled with a
+            # different origin. A name with a slash is not a PATH lookup.
+            continue
         if dangling(exact):
             broken.append({"path": exact, "target": os.readlink(exact),
                            "origin": entry["origin"], "path_index": entry["index"]})
@@ -160,10 +205,22 @@ def main():
     entries, supplied = path_entries()
     info = host()
     watchlist = WATCHLIST + [c for c in extra_commands() if c not in WATCHLIST]
+    # Each extra command costs a stat against every PATH entry, which on WSL
+    # means crossing the 9p boundary once per Windows directory. Past this many
+    # the step outruns its own timeout and the whole play fails instead of
+    # answering, so the list is capped and the cap is reported.
+    dropped_commands = max(0, len(watchlist) - COMMAND_LIMIT)
+    watchlist = watchlist[:COMMAND_LIMIT]
 
     commands, findings = [], []
     for command in watchlist:
         bare, win_ext, broken = scan(command, entries)
+        # Collapse hits that are the same file. /bin is a symlink to usr/bin on
+        # Debian and Ubuntu, so /bin/git and /usr/bin/git were reported as two
+        # copies of git when there is one, and a duplicated PATH entry made a
+        # command shadow itself. Eight of the thirteen findings on the machine
+        # this was written on were this bug.
+        bare = distinct_files(bare)
         winner = bare[0] if bare else None
         others = bare[1:]
 
@@ -174,12 +231,26 @@ def main():
         elif winner["windows"] and any(not h["windows"] for h in others):
             verdict = "windows_shadows_native"
         elif winner["windows"]:
-            verdict = "windows_only"
+            verdict = ("windows_only" if is_pe_binary(winner["path"])
+                       else "script_on_windows_fs")
         elif others:
             verdict = "shadowed"
         else:
             verdict = "single"
 
+        if winner is not None:
+            target = os.path.realpath(winner["path"])
+            if target.startswith("/mnt/wsl/") and winner["path"] != target:
+                findings.append({
+                    "severity": "medium", "command": command,
+                    "kind": "integration_mount", "path": winner["path"],
+                    "target": target,
+                    "detail": ("Resolves through a symlink into /mnt/wsl, which an "
+                               "integration such as Docker Desktop fills only while "
+                               "it is running. It works now. Stop that integration "
+                               "and this command stops resolving, and whatever is "
+                               "next on PATH takes over silently."),
+                })
         commands.append({"command": command, "verdict": verdict,
                          "resolves_to": winner["path"] if winner else None,
                          "origin": winner["origin"] if winner else None,
@@ -199,6 +270,14 @@ def main():
                 "path": winner["path"],
                 "shadowed": [h["path"] for h in others if not h["windows"]],
                 "detail": "A Windows copy wins over an installed native copy.",
+            })
+        elif verdict == "script_on_windows_fs":
+            findings.append({
+                "severity": "low", "command": command,
+                "kind": "script_on_windows_fs", "path": winner["path"],
+                "detail": ("Lives on the Windows drive but is a script with a Linux "
+                           "interpreter, so it runs as a Linux process with normal "
+                           "path semantics. It is still read over the slow 9p mount."),
             })
         elif verdict == "windows_only":
             findings.append({
@@ -221,6 +300,7 @@ def main():
                 "severity": severity, "command": command, "kind": "shadowed",
                 "path": winner["path"], "origin": winner["origin"],
                 "shadowed": ["%s (%s)" % (h["path"], h["origin"]) for h in others],
+                "other_copies": len(others),
                 "detail": ("%s wins; %d other cop%s on PATH."
                            % (winner["origin"], len(others), "y" if len(others) == 1 else "ies")),
             })
@@ -251,12 +331,23 @@ def main():
             "kind": "stale_manager_entry", "path": paths[0],
             "origin": origin, "entry_count": len(paths),
             "examples": paths[:3],
-            "detail": ("%s has %d director%s on PATH that do not exist, so every "
+            "detail": ("%s has %d director%s on PATH that %s not exist, so every "
                        "lookup walks past %s. Either it was removed, or a version "
                        "it pinned was, and a startup file still adds the path."
                        % (origin, len(paths), "y" if len(paths) == 1 else "ies",
+                          "does" if len(paths) == 1 else "do",
                           "it" if len(paths) == 1 else "them")),
         })
+
+    # A command already named in a high or medium finding does not also need a
+    # low "resolves past another copy" line. docker was listed twice: once for
+    # its integration mount, once as an ordinary shadowed command.
+    louder = {f.get("command") for f in findings
+              if f.get("severity") in ("high", "medium") and f.get("command")}
+    findings = [f for f in findings
+                if not (f.get("severity") == "low"
+                        and f.get("kind") == "shadowed"
+                        and f.get("command") in louder)]
 
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: (order.get(f["severity"], 9), f["kind"], f["command"] or ""))
@@ -278,9 +369,18 @@ def main():
         "probe": "shadow", "host": info,
         "path_source": "supplied" if supplied else "inherited",
         "path_entry_count": len(entries),
+        "absent_count": sum(1 for c in commands if c.get("verdict") == "absent"),
+        "watched_count": len(commands),
+        "commands_dropped": dropped_commands,
         "windows_entry_count": sum(1 for e in entries if e["windows"]),
         "duplicate_entry_count": sum(1 for e in entries if e["duplicate_of"] is not None),
-        "missing_entries": [e["path"] for e in entries if not e["exists"]],
+        # Capped, because this list is the one thing the budget below cannot
+        # trim and a PATH of 700 long dead directories pushed the payload past
+        # rote's 65536-byte cut. The consuming step then failed to parse and
+        # the report said every command resolved correctly, which is an
+        # affirmative claim about a machine that was never examined.
+        "missing_entries": [e["path"] for e in entries if not e["exists"]][:40],
+        "missing_entry_count": sum(1 for e in entries if not e["exists"]),
         "version_managers_on_path": managers,
         "commands": commands,
             "detail_level": detail, "findings": findings,

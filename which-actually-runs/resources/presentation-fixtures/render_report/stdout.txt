@@ -1,4 +1,4 @@
-WHICH ACTUALLY RUNS                                  2026-09-04 12:42 UTC
+WHICH ACTUALLY RUNS                                  2026-09-06 14:55 UTC
 
   probes    ########################  2/2 ok
 
@@ -19,6 +19,11 @@ WHAT WINS, AND WHAT IT BEAT
          /Users/example/.pyenv/shims/python3
          beats: /opt/homebrew/bin/python3 (homebrew (apple silicon))
          beats: /usr/bin/python3 (system)
+
+ALSO RESOLVED, NOTHING WRONG
+  duplicate PATH entry
+         Duplicate PATH entry, usually an unguarded rc append.
+         /opt/homebrew/bin
 
 WHERE YOUR PATH COMES FROM
   ~/.zprofile:2    eval "$(/opt/homebrew/bin/brew shellenv)"

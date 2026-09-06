@@ -32,13 +32,53 @@ def stem(word):
     against a play named dependency-sweep, because the plural did not match the
     singular. A false all-clear is the most damaging output this can produce, so
     the matcher errs toward collapsing forms rather than distinguishing them.
+
+    The first version stripped a trailing "es" before it tried "s", which is
+    wrong for every plural whose singular ends in e: files became fil, pages
+    became pag, notes became not. That last one was the worst, because "not"
+    then matched almost every description in the registry. The rule now only
+    takes the whole "es" when the stem ends in a sibilant, which is where that
+    plural actually comes from.
+
+    Two pairs stay unmatched and cannot be fixed by any rule of this shape:
+    cache/caches and analysis/analyses. Both need the same test that branch/
+    branches and status/statuses need, and it points the other way. 18 of the
+    20 commonest developer plurals unify, and the two that do not are named
+    here rather than hidden.
     """
-    for suffix, replacement in (("ies", "y"), ("sses", "ss"), ("ches", "ch"),
-                                ("shes", "sh"), ("xes", "x"), ("ses", "s"),
-                                ("es", ""), ("s", "")):
-        if len(word) > len(suffix) + 2 and word.endswith(suffix):
-            return word[:-len(suffix)] + replacement
-    return word
+    if len(word) <= 3 or not word.endswith("s"):
+        return word
+    if word.endswith("ies") and len(word) > 4:
+        return word[:-3] + "y"
+    if word.endswith("es") and len(word) > 4:
+        base = word[:-2]
+        # A real -es plural only when the stem ends in a sibilant it needs the
+        # e for: class/classes, box/boxes, branch/branches, status/statuses.
+        # A bare trailing "s" is not enough, or release/releases collapses to
+        # "releas" and cache/caches to "cach".
+        if base.endswith(("ss", "x", "z", "ch", "sh", "us", "is")):
+            return base
+        # files, pages, changes, notes, releases
+        return word[:-1]
+    # status and pass are not plurals
+    if word.endswith(("ss", "us", "is")):
+        return word
+    return word[:-1]
+
+
+# Words that are ordinary English rather than a subject. They still match, and
+# they still count toward description overlap, but they are not allowed to be
+# the evidence behind an "already built" verdict. Without this, an idea about
+# watching web pages for changes was told it was already built by a play named
+# since-last, which is about files an agent touched: the two shared words were
+# "since" and "last".
+GLUE = set("""first last next final full quick simple easy fast slow small big
+large long short high low old new real true false main basic single multi auto
+back down out off again here there only just still also very much many both
+each own same such once may might must shall will would could should about
+above below between through during before after until unless because though
+although however whether either neither self auto pre post non
+""".split())
 
 
 def words_of(text):
@@ -95,6 +135,11 @@ def main():
 
     idea = found.get("idea", "")
     idea_words = words_of(idea)
+    # Stems are an internal detail. Keep the word the person actually typed so
+    # the output can name it back to them.
+    original_of = {}
+    for raw in re.findall(r"[a-z0-9][a-z0-9-]{2,}", (idea or "").lower()):
+        original_of.setdefault(stem(raw), raw)
     total_queries = max(1, len(found.get("queries_run", [])))
     candidates = found.get("candidates", [])
 
@@ -122,7 +167,13 @@ def main():
     # strong evidence. So the weighting stays deliberately simple and is used
     # for ranking, while the verdict rests on a structural rule below.
     def weight(word):
-        return math.log((corpus + 1.0) / (1.0 + doc_freq.get(word, 0)))
+        # The +0.25 floor matters when few candidates come back. Without it a
+        # word present in all of them weighs log(1) = 0, every ratio built on
+        # it collapses to zero, and a one-candidate search could never reach
+        # "already built" however exactly the names matched. A narrow idea is
+        # exactly the case that returns few candidates, so the detector was
+        # weakest where the idea was most specific.
+        return math.log((corpus + 1.0) / (1.0 + doc_freq.get(word, 0))) + 0.25
 
     def mass(words):
         return sum(weight(w) for w in words)
@@ -132,7 +183,7 @@ def main():
     # for rare ones. It is the weight of a word appearing in about six percent
     # of the candidates, so it scales with the sample rather than being a
     # number picked once against one registry.
-    evidence_floor = math.log((corpus + 1.0) / (1.0 + 0.06 * corpus))
+    evidence_floor = math.log((corpus + 1.0) / (1.0 + 0.06 * corpus)) + 0.25
 
     assessed = []
     for candidate in candidates:
@@ -153,7 +204,13 @@ def main():
         desc_overlap = mass(d_words & idea_words) / max(1e-9, mass(idea_words))
         tag_overlap = (mass(t_words & idea_words) / max(1e-9, mass(t_words))
                        if t_words else 0.0)
-        query_share = len(candidate["matched_queries"]) / total_queries
+        matched = candidate.get("matched_query_total",
+                                len(candidate.get("matched_queries", [])))
+        query_share = matched / total_queries
+
+        # The words carrying real subject matter, as opposed to the English
+        # that happens to be in a name. "already built" turns on these.
+        subject_words = shared_name - GLUE
 
         # Name similarity dominates: a matching name is the collision that
         # actually costs you, and description overlap is noisy at this length.
@@ -164,18 +221,23 @@ def main():
         # to know it too. Without this a play can sit in a lower band while
         # showing a higher number than the band above it, which reads as a
         # sorting bug rather than as the judgement it is.
-        if len(shared_name) >= 2:
+        if len(subject_words) >= 2:
             score += 0.12
 
         # "Already built" is a strong claim, so it needs more than one word.
         # A single shared word is how this once called four unrelated plays a
         # collision, on "first", "copy" and "find". One word now caps at
         # adjacent, which still puts the play in front of you to read.
-        if len(shared_name) >= 2 and name_overlap >= 0.4:
+        if len(subject_words) >= 2 and name_overlap >= 0.4:
             closeness = "same idea"
-        elif name_overlap >= 0.25 or score >= 0.35:
+        elif (name_overlap >= 0.25 and score >= 0.18) or score >= 0.35:
             closeness = "adjacent"
-        elif score >= 0.18:
+        elif score >= 0.18 or shared_name:
+            # Sharing a name word is never nothing. The scores are calibrated
+            # on the sixty-odd candidates a broad idea returns, and a narrow
+            # idea can return two, where the weights go flat and a real
+            # collision scores 0.12. Anything sharing a name word stays on the
+            # page so a person can judge it.
             closeness = "loosely related"
         else:
             closeness = "unrelated"
@@ -191,7 +253,7 @@ def main():
             "idea_cover": round(idea_cover, 2),
             "evidence_floor": round(evidence_floor, 2),
             "closeness": closeness,
-            "matched_query_count": len(candidate["matched_queries"]),
+            "matched_query_count": matched,
         })
         assessed.append(candidate)
 
@@ -200,10 +262,23 @@ def main():
     adjacent = [c for c in assessed if c["closeness"] == "adjacent"]
     related = [c for c in assessed if c["closeness"] == "loosely related"]
 
-    if same:
+    failed = found.get("queries_failed") or []
+    ran = found.get("queries_run") or []
+    if not assessed and failed:
+        # Zero results after failures is not an empty registry. The JSON is
+        # documented as suitable for gating a build script, and a gate keying
+        # on the verdict used to pass here.
+        verdict = "cannot tell"
+        headline = ("%d of %d registry searches failed and nothing came back, so "
+                    "nothing was checked. This is not an all-clear. Try again, or "
+                    "check that rote can reach the registry."
+                    % (len(failed), len(ran) or len(failed)))
+    elif same:
         verdict = "already built"
         headline = ("%d play(s) already do this. Read them before you write a line."
                     % len(same))
+        if len(same) > 5:
+            headline += " The %d closest are listed." % 5
     elif len(adjacent) >= 3:
         verdict = "crowded"
         headline = ("No exact match, but %d adjacent plays. Whatever you build has to be "
@@ -213,6 +288,11 @@ def main():
         verdict = "adjacent work exists"
         headline = ("%d play(s) are close enough to read first, then decide whether yours "
                     "is a different question or the same one." % len(adjacent))
+    elif related:
+        verdict = "adjacent work exists"
+        headline = ("%d play(s) share a word with your idea without matching it "
+                    "closely. That is weak evidence either way, so read them before "
+                    "deciding rather than treating this as a clear run." % len(related))
     else:
         verdict = "nothing close found"
         headline = ("Nothing lexically close. That is not proof it is unbuilt: this matches "
@@ -223,8 +303,9 @@ def main():
     # matched reliably by any word matcher, including this one. Saying so is
     # more useful than a verdict computed from words that carry no signal.
     distinctive = [w for w in sorted(idea_words) if weight(w) >= evidence_floor]
-    if idea_words and not distinctive:
-        weak_idea = sorted(idea_words)
+    if idea_words and not distinctive and verdict not in ("already built",
+                                                          "cannot tell"):
+        weak_idea = sorted(original_of.get(w, w) for w in idea_words)
         headline += (" Every word in the idea is common in these results (%s), so the "
                      "ranking below is weak. Rephrase with the specific noun for the "
                      "thing you are building and run it again."
@@ -240,11 +321,15 @@ def main():
         "queries_run": found.get("queries_run", []),
         "queries_failed": found.get("queries_failed", []),
         "candidate_count": len(assessed),
-        "distinctive_idea_words": distinctive,
+        "distinctive_idea_words": [original_of.get(w, w) for w in distinctive],
         "weak_idea_words": weak_idea,
         "same_idea": same[:5],
+        "same_idea_total": len(same),
         "adjacent": adjacent[:6],
+        "adjacent_total": len(adjacent),
         "loosely_related": related[:6],
+        "loosely_related_total": len(related),
+        "queries_failed_count": len(failed),
         "all_ranked": assessed[:20],
     }, indent=2, sort_keys=True))
     return 0

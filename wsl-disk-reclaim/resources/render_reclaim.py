@@ -30,9 +30,21 @@ def load(source):
 
 
 def gb(value):
+    """Format a byte count, keeping "nothing" and "not measured" distinct.
+
+    These used to render identically as a dash, so a machine where no image was
+    found looked the same as one with nothing to reclaim. They are opposite
+    answers and the report has to tell them apart.
+
+    GiB, and labelled GiB: the numbers are powers of two and Explorer's "GB" is
+    the same quantity under a different name, but this play also emits JSON, so
+    the unit has to be the one actually computed.
+    """
+    if value is None:
+        return "    n/a"
     if not value:
-        return "     -"
-    return "%6.2f GB" % (value / 1024 ** 3)
+        return "  0.00 GiB"
+    return "%6.2f GiB" % (value / 1024 ** 3)
 
 
 def argument(index, default):
@@ -98,7 +110,7 @@ def main():
     total = images.get("windows_total_bytes") or 0
     lines.append("VERDICT  WSL is holding %s of your Windows disk." % gb(total).strip())
     inside_free = consumers.get("measured_total_bytes") or 0
-    distro_gap = images.get("distro_reclaimable_bytes") or 0
+    distro_gap = images.get("distro_reclaimable_bytes")
     lines.append("  %s already freed inside and not returned to Windows"
                  % gb(distro_gap).strip())
     lines.append("  %s sitting in caches that can be cleared" % gb(inside_free).strip())
@@ -116,7 +128,9 @@ def main():
     lines.append("")
 
     lines.append("INSIDE THE DISTRO")
-    measured = [c for c in consumers.get("consumers", []) if c.get("state") == "measured"]
+    partial = set(consumers.get("partial", []))
+    measured = [c for c in consumers.get("consumers", [])
+                if c.get("state") in ("measured", "partial")]
     measured.sort(key=lambda c: -(c.get("bytes") or 0))
     if not measured:
         lines.append("  nothing measurable was found")
@@ -124,9 +138,21 @@ def main():
         if not consumer.get("bytes"):
             continue
         nested = ("  (counted inside %s)" % consumer["contained_by"]) if consumer.get("contained_by") else ""
-        lines.append("  %s  %s%s" % (gb(consumer["bytes"]), consumer["label"], nested))
+        floor = "  (at least; part of it could not be read)" if consumer["label"] in partial else ""
+        lines.append("  %s  %s%s%s"
+                     % (gb(consumer["bytes"]), consumer["label"], nested, floor))
     for label in consumers.get("incomplete", []):
-        lines.append("  %s  %s" % ("   n/a", label + " (not measured)"))
+        lines.append("  %s  %s" % (gb(None), label + " (not measured)"))
+    # The rows do not add up to the total and they are not meant to: the nested
+    # ones are already inside a parent above them. Saying so beats leaving the
+    # reader to add the column and find it disagrees with the verdict.
+    nested_total = sum(c.get("bytes") or 0 for c in measured if c.get("contained_by"))
+    if nested_total:
+        lines.append("  %s  counted once, not twice: the rows marked as nested are"
+                     % gb(consumers.get("measured_total_bytes")))
+        lines.append("            already inside a row above them, so the column adds")
+        lines.append("            up to more than the total. The total is what you can")
+        lines.append("            actually free.")
     lines.append("")
 
     lines.append("HOW TO RECLAIM, IN THIS ORDER")
