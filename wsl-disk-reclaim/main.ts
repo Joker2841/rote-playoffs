@@ -39,9 +39,17 @@
  * - storage
  * - vhdx
  * - reclaim
+ * - audience-developers
+ * - domain-engineering
+ * - developer-tools
+ * - python
+ * - no-credentials
+ * - no-api-key
+ * - offline
+ * - local-only
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.1.2
+ *   version: 0.1.3
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
@@ -66,6 +74,14 @@
  *     - storage
  *     - vhdx
  *     - reclaim
+ *     - audience-developers
+ *     - domain-engineering
+ *     - developer-tools
+ *     - python
+ *     - no-credentials
+ *     - no-api-key
+ *     - offline
+ *     - local-only
  * presentation_fixtures:
  *   detect_platform: resources/presentation-fixtures/detect_platform/fixture.yaml
  *   measure_images: resources/presentation-fixtures/measure_images/fixture.yaml

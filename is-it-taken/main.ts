@@ -22,6 +22,12 @@
  * - hackathon
  * - tool-shell
  * - effect-read-only
+ * - audience-developers
+ * - domain-engineering
+ * - developer-tools
+ * - python
+ * - no-credentials
+ * - no-api-key
  * parameters:
  * - name: idea
  *   type: string
@@ -36,7 +42,7 @@
  *   - json
  *   description: text for the human verdict, json for a machine-readable one suitable for gating a build script.
  * metadata:
- *   version: 0.1.2
+ *   version: 0.1.3
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
@@ -65,6 +71,12 @@
  *     - hackathon
  *     - tool-shell
  *     - effect-read-only
+ *     - audience-developers
+ *     - domain-engineering
+ *     - developer-tools
+ *     - python
+ *     - no-credentials
+ *     - no-api-key
  * presentation_fixtures:
  *   search_registry: resources/presentation-fixtures/search_registry/fixture.yaml
  *   assess_overlap: resources/presentation-fixtures/assess_overlap/fixture.yaml

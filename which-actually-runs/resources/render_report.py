@@ -20,6 +20,7 @@ EXPLAIN = {
     "windows_exe_only": "command not found, but installed on Windows",
     "shadowed": "more than one copy on PATH",
     "duplicate_path_entry": "duplicate PATH entry",
+    "stale_manager_entry": "on PATH, but the directory is gone",
 }
 
 
@@ -99,7 +100,12 @@ def main():
     elif high:
         lines.append("VERDICT  %d command(s) resolve to something that is not there or not native." % high)
     else:
-        lines.append("VERDICT  Working, with %d command(s) whose winner is not obvious." % len(actionable))
+        named = len({f.get("command") for f in actionable if f.get("command")})
+        other = len(actionable) - named
+        summary = "%d command(s) whose winner is not obvious" % named if named else ""
+        if other:
+            summary += (" and " if summary else "") + "%d PATH problem(s)" % other
+        lines.append("VERDICT  Working, with %s." % summary)
     lines.append("")
 
     lines.append("WHAT WINS, AND WHAT IT BEAT")
@@ -108,11 +114,19 @@ def main():
         lines.append("  nothing worth reporting")
     for finding in ranked:
         lines.append("  %-6s %-10s %s" % (finding["severity"].upper(),
-                                          finding.get("command") or "-",
+                                          (finding.get("command")
+                                           or finding.get("origin") or "-")[:10],
                                           EXPLAIN.get(finding["kind"], finding["kind"])))
         lines.append("         %s" % finding.get("path", ""))
         if finding.get("target"):
             lines.append("         target missing: %s" % finding["target"])
+        for extra in (finding.get("examples") or [])[1:]:
+            lines.append("         %s" % extra)
+        if finding.get("entry_count", 0) > 3:
+            lines.append("         ... and %d more" % (finding["entry_count"] - 3))
+        if not finding.get("command") and finding.get("detail"):
+            for wrapped in textwrap.wrap(" ".join(finding["detail"].split()), width=68):
+                lines.append("         " + wrapped)
         for shadowed in (finding.get("shadowed") or [])[:4]:
             lines.append("         beats: %s" % shadowed)
     lines.append("")

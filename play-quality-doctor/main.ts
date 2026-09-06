@@ -18,6 +18,14 @@
  * - frontmatter
  * - tool-shell
  * - effect-read-only
+ * - audience-developers
+ * - domain-engineering
+ * - developer-tools
+ * - python
+ * - no-credentials
+ * - no-api-key
+ * - offline
+ * - local-only
  * parameters:
  * - name: play
  *   type: string
@@ -43,7 +51,7 @@
  *   default: '1.0'
  *   description: Only list plays predicted below this score. Totals still cover every audited play, so filtering never hides how many were checked.
  * metadata:
- *   version: 0.3.2
+ *   version: 0.3.3
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
@@ -68,6 +76,14 @@
  *     - frontmatter
  *     - tool-shell
  *     - effect-read-only
+ *     - audience-developers
+ *     - domain-engineering
+ *     - developer-tools
+ *     - python
+ *     - no-credentials
+ *     - no-api-key
+ *     - offline
+ *     - local-only
  * presentation_fixtures:
  *   locate_plays: resources/presentation-fixtures/locate_plays/fixture.yaml
  *   score_plays: resources/presentation-fixtures/score_plays/fixture.yaml

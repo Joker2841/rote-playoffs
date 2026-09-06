@@ -78,12 +78,23 @@ def search(query, limit=10):
 
 def main():
     idea = argument(1)
-    if not idea:
-        print(json.dumps({"probe": "search", "error":
-                          "no idea given. Pass idea=\"what you are about to build\"."}))
-        return 1
+    queries, words = queries_for(idea or "")
 
-    queries, words = queries_for(idea)
+    # No usable words means no search happened, and that must not come out the
+    # far end as "nothing close found". An empty idea used to fail the step
+    # outright, and an idea of pure punctuation used to run one query, match
+    # nothing, and report a clean all-clear, which is the single most damaging
+    # thing this can say. Both now return the same honest non-answer.
+    if not words:
+        print(json.dumps({
+            "probe": "search",
+            "idea": idea or "",
+            "unsearchable": ("no searchable words in the idea"
+                             if idea else "no idea given"),
+            "queries_run": [], "queries_failed": [], "candidates": [],
+        }, indent=2, sort_keys=True))
+        return 0
+
     hits, failed = {}, []
     for query in queries:
         items = search(query)

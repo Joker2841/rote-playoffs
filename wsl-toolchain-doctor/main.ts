@@ -49,9 +49,18 @@
  * - toolchain
  * - diagnostics
  * - windows-interop
+ * - audience-developers
+ * - domain-engineering
+ * - developer-tools
+ * - python
+ * - no-credentials
+ * - no-api-key
+ * - offline
+ * - local-only
+ * - engineering-workflows
  * metadata:
  *   rote_version: 0.78.0
- *   version: 0.2.3
+ *   version: 0.2.4
  *   status: released
  *   kind: atomic
  *   flow_type: parallel
@@ -76,6 +85,15 @@
  *     - toolchain
  *     - diagnostics
  *     - windows-interop
+ *     - audience-developers
+ *     - domain-engineering
+ *     - developer-tools
+ *     - python
+ *     - no-credentials
+ *     - no-api-key
+ *     - offline
+ *     - local-only
+ *     - engineering-workflows
  * presentation_fixtures:
  *   detect_platform: resources/presentation-fixtures/detect_platform/fixture.yaml
  *   resolve_commands: resources/presentation-fixtures/resolve_commands/fixture.yaml

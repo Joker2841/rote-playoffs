@@ -24,6 +24,15 @@
  * - tool-shell
  * - domain-developer-workflow
  * - effect-read-only
+ * - audience-developers
+ * - domain-engineering
+ * - developer-tools
+ * - python
+ * - no-credentials
+ * - no-api-key
+ * - offline
+ * - local-only
+ * - engineering-workflows
  * parameters:
  * - name: commands
  *   type: string
@@ -44,7 +53,7 @@
  *   - json
  *   description: text for the human briefing, json for a machine-readable report.
  * metadata:
- *   version: 0.1.2
+ *   version: 0.1.3
  *   rote_version: 0.78.0
  *   status: released
  *   kind: atomic
@@ -75,6 +84,15 @@
  *     - tool-shell
  *     - domain-developer-workflow
  *     - effect-read-only
+ *     - audience-developers
+ *     - domain-engineering
+ *     - developer-tools
+ *     - python
+ *     - no-credentials
+ *     - no-api-key
+ *     - offline
+ *     - local-only
+ *     - engineering-workflows
  * presentation_fixtures:
  *   resolve_commands: resources/presentation-fixtures/resolve_commands/fixture.yaml
  *   read_shell_config: resources/presentation-fixtures/read_shell_config/fixture.yaml

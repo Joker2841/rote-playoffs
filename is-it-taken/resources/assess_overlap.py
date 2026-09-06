@@ -77,6 +77,22 @@ def main():
         print(json.dumps({"probe": "assess", "error": found["error"]}))
         return 1
 
+    if found.get("unsearchable"):
+        print(json.dumps({
+            "probe": "assess",
+            "idea": found.get("idea", ""),
+            "verdict": "cannot tell",
+            "headline": ("%s, so no search was run. This is not an all-clear: "
+                         "nothing was checked. Describe the problem you are "
+                         "solving in a sentence of plain words and run it again."
+                         % found["unsearchable"].capitalize()),
+            "queries_run": [], "queries_failed": [], "candidate_count": 0,
+            "distinctive_idea_words": [], "weak_idea_words": [],
+            "same_idea": [], "adjacent": [], "loosely_related": [],
+            "all_ranked": [],
+        }, indent=2, sort_keys=True))
+        return 0
+
     idea = found.get("idea", "")
     idea_words = words_of(idea)
     total_queries = max(1, len(found.get("queries_run", [])))

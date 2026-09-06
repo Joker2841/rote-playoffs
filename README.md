@@ -294,6 +294,19 @@ It names the winning path, what it beat, and which cause explains it. Then it
 reads your shell startup files to show which line put each directory on PATH,
 because knowing nvm beats Homebrew does not tell you which file to edit.
 
+## A gap that stayed open until the last pass
+
+A version manager on PATH whose directory no longer exists was dropped from the
+report rather than named. The summary filtered managers to the ones that exist,
+so the "shim points at a version you uninstalled" case - the one the description
+leads with - was the one case that produced no output at all. It is now a medium
+finding, and running it against my own machine immediately turned up a real
+one: `/snap/bin` on PATH, no `/snap` directory.
+
+It is grouped by manager, not listed per entry. A PATH carrying 800 dead pyenv
+directories is one problem told 800 times, and the first version of this fix
+printed 4000 lines of identical text before the grouping went in.
+
 ## Why this exists separately from wsl-toolchain-doctor
 
 `wsl-toolchain-doctor` is the WSL specialist. This is the same engine with the
@@ -402,6 +415,14 @@ deliberately simple now, and the verdict rests on the structural rule instead.
 
 When every word in an idea is common in the results, the output says so and
 asks you to rephrase, rather than ranking on words that carry no signal.
+
+Two degenerate inputs were fixed in the same pass. An empty idea failed the step
+outright, so the play reported a crash where it should have reported a usage
+problem. An idea of pure punctuation ran one query, matched nothing, and
+returned **nothing close found** - a clean all-clear from a search that never
+happened, which is precisely the output this play says is the most damaging
+thing it can produce. Both now return a fourth-and-a-half verdict, **cannot
+tell**, which states that nothing was checked.
 
 ## Running it
 

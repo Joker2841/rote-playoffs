@@ -231,6 +231,33 @@ def main():
                              "kind": "duplicate_path_entry", "path": entry["path"],
                              "detail": "Duplicate PATH entry, usually an unguarded rc append."})
 
+    # A manager directory that is on PATH but gone is the "shim points at a
+    # version you uninstalled" case this play exists to name, and it used to
+    # vanish from the report entirely: the summary below filters managers to
+    # the ones that exist, so a stale entry was dropped rather than reported.
+    # Grouped by manager rather than one finding per entry. A PATH carrying 800
+    # dead pyenv directories is one problem told 800 times, and printing it
+    # that way buries every other finding in the report.
+    stale = {}
+    for entry in entries:
+        if entry["exists"] or entry["origin_kind"] not in ("version manager",
+                                                           "package manager"):
+            continue
+        stale.setdefault(entry["origin"], []).append(entry["path"])
+    for origin in sorted(stale):
+        paths = stale[origin]
+        findings.append({
+            "severity": "medium", "command": None,
+            "kind": "stale_manager_entry", "path": paths[0],
+            "origin": origin, "entry_count": len(paths),
+            "examples": paths[:3],
+            "detail": ("%s has %d director%s on PATH that do not exist, so every "
+                       "lookup walks past %s. Either it was removed, or a version "
+                       "it pinned was, and a startup file still adds the path."
+                       % (origin, len(paths), "y" if len(paths) == 1 else "ies",
+                          "it" if len(paths) == 1 else "them")),
+        })
+
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: (order.get(f["severity"], 9), f["kind"], f["command"] or ""))
     managers = sorted({e["origin"] for e in entries
